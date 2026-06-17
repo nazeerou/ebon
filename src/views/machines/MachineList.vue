@@ -1112,7 +1112,7 @@ onUnmounted(() => {
   color: #ef4444;
 }
 .form-control {
-  width: 100%;
+  width: 94%;
   padding: 0.5rem 0.75rem;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
