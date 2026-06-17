@@ -5,11 +5,6 @@
         <h1>Usomaji wa Mita</h1>
         <p class="subtitle">Ingiza Code ya mashine, usomaji na picha</p>
       </div>
-      <div class="header-actions">
-        <router-link to="/readings" class="btn-secondary">
-          <i class="fas fa-arrow-left"></i> <span>Rudi kwenye Orodha</span>
-        </router-link>
-      </div>
     </div>
 
     <div class="ocr-card">
@@ -1199,8 +1194,8 @@ onMounted(() => {
 }
 .btn-camera,
 .btn-upload {
-  padding: 0.6rem 1.2rem;
-  border-radius: 0.75rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.95rem;
   font-weight: 600;
   display: inline-flex;
   align-items: center;

@@ -2,52 +2,41 @@
   <footer class="footer">
     <div class="footer-content">
       <div class="footer-left">
-        <p>&copy; {{ currentYear }} Bonanza Management System. Haki zote zimehifadhiwa.</p>
-      </div>
-
-      <div class="footer-right">
-        <div class="footer-links">
-          <a href="#" @click.prevent="showHelp">Msaada</a>
-          <span class="separator">|</span>
-          <a href="#" @click.prevent="showTerms">Masharti</a>
-          <span class="separator">|</span>
-          <a href="#" @click.prevent="showPrivacy">Faragha</a>
-        </div>
-
-        <div class="footer-stats">
-          <span class="stat-item">
-            <i class="fas fa-microchip"></i>
-            Mashine: {{ totalMachines }}
-          </span>
-          <span class="stat-item">
-            <i class="fas fa-clock"></i>
-            {{ currentTime }}
-          </span>
-          <span class="stat-item">
-            <i class="fas fa-wifi"></i>
-            <span :class="connectionStatus === 'online' ? 'text-success' : 'text-danger'">
-              {{ connectionStatus === 'online' ? 'Online' : 'Offline' }}
-            </span>
-          </span>
-        </div>
+        <p>&copy; {{ currentYear }} eBon GameZone. Haki zote zimehifadhiwa.</p>
       </div>
     </div>
 
     <!-- Quick Actions (visible on mobile) -->
     <div class="quick-actions">
-      <button @click="quickAction('machines')" class="quick-action-btn">
+      <button
+        class="quick-action-btn"
+        :class="{ disabled: !isAdmin }"
+        @click="isAdmin && quickAction('machines')"
+      >
         <i class="fas fa-microchip"></i>
         <span>Mashine</span>
       </button>
-      <button @click="quickAction('readings')" class="quick-action-btn">
+      <button
+        class="quick-action-btn"
+        :class="{ disabled: !isAdmin }"
+        @click="isAdmin && quickAction('readings')"
+      >
         <i class="fas fa-camera-retro"></i>
         <span>Usomaji</span>
       </button>
-      <button @click="quickAction('collections')" class="quick-action-btn">
+      <button
+        class="quick-action-btn"
+        :class="{ disabled: !isAdmin }"
+        @click="isAdmin && quickAction('collections')"
+      >
         <i class="fas fa-hand-holding-usd"></i>
         <span>Makusanyo</span>
       </button>
-      <button @click="quickAction('reports')" class="quick-action-btn">
+      <button
+        class="quick-action-btn"
+        :class="{ disabled: !isAdmin }"
+        @click="isAdmin && quickAction('reports')"
+      >
         <i class="fas fa-chart-bar"></i>
         <span>Ripoti</span>
       </button>
@@ -81,7 +70,6 @@
         </div>
         <div class="modal-body">
           <p>Masharti ya matumizi ya mfumo wa Bonanza Management System...</p>
-          <!-- Add detailed terms if needed -->
         </div>
       </div>
     </div>
@@ -95,7 +83,6 @@
         </div>
         <div class="modal-body">
           <p>Sera ya faragha ya Bonanza Management System...</p>
-          <!-- Add detailed privacy policy if needed -->
         </div>
       </div>
     </div>
@@ -106,9 +93,11 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDashboardStore } from '@/stores/dashboard'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const dashboardStore = useDashboardStore()
+const authStore = useAuthStore()
 
 // State
 const currentTime = ref(new Date().toLocaleTimeString('sw-TZ'))
@@ -121,8 +110,13 @@ const showPrivacyModal = ref(false)
 const currentYear = computed(() => new Date().getFullYear())
 const totalMachines = computed(() => dashboardStore.dashboardData?.total_machines ?? 0)
 
+// Role check
+const isAdmin = computed(() => authStore.user?.role === 'admin')
+
 // Methods
 const quickAction = (action) => {
+  // Only admin can trigger navigation
+  if (!isAdmin.value) return
   const routes = {
     machines: '/machines',
     readings: '/readings',
@@ -175,7 +169,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* All styles remain exactly as in the original footer */
+/* All existing styles remain unchanged */
 .footer {
   background: white;
   border-top: 1px solid #eef2f6;
@@ -253,6 +247,7 @@ onUnmounted(() => {
   color: #f44336;
 }
 
+/* Quick Actions */
 .quick-actions {
   display: none;
   position: fixed;
@@ -277,232 +272,17 @@ onUnmounted(() => {
   cursor: pointer;
   padding: 5px 10px;
   border-radius: 5px;
+  transition: all 0.2s;
 }
 
-.quick-action-btn:hover {
+.quick-action-btn:hover:not(.disabled) {
   background: #f5f5f5;
 }
 
-.quick-action-btn i {
-  font-size: 1.2rem;
-}
-
-.quick-action-btn span {
-  font-size: 0.7rem;
-}
-
-/* Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 10px;
-  width: 90%;
-  max-width: 500px;
-  max-height: 80vh;
-  overflow-y: auto;
-}
-
-.modal-header {
-  padding: 15px 20px;
-  border-bottom: 1px solid #eef2f6;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.modal-header h3 {
-  margin: 0;
-  color: #333;
-  font-size: 1.1rem;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: #999;
-}
-
-.modal-body {
-  padding: 20px;
-}
-
-.help-list {
-  list-style: none;
-  padding: 0;
-  margin: 15px 0 0;
-}
-
-.help-list li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 0;
-  border-bottom: 1px solid #f5f5f5;
-}
-
-.help-list li i {
-  width: 25px;
-  color: #2196f3;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .footer {
-    padding: 15px;
-    margin-bottom: 70px;
-  }
-
-  .footer-content {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .footer-right {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .footer-stats {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  .quick-actions {
-    display: flex;
-  }
-}
-
-@media (max-width: 480px) {
-  .footer-links {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  .footer-stats {
-    flex-direction: column;
-    gap: 5px;
-  }
-}
-
-.footer {
-  background: white;
-  border-top: 1px solid #eef2f6;
-  padding: 15px 25px;
-  margin-top: auto;
-}
-
-.footer-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 15px;
-}
-
-.footer-left p {
-  margin: 0;
-  color: #666;
-  font-size: 0.85rem;
-}
-
-.footer-right {
-  display: flex;
-  align-items: center;
-  gap: 25px;
-  flex-wrap: wrap;
-}
-
-.footer-links {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.footer-links a {
-  color: #666;
-  text-decoration: none;
-  font-size: 0.85rem;
-  transition: color 0.3s;
-}
-
-.footer-links a:hover {
-  color: #2196f3;
-}
-
-.separator {
-  color: #ddd;
-  font-size: 0.85rem;
-}
-
-.footer-stats {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: #666;
-  font-size: 0.85rem;
-}
-
-.stat-item i {
-  font-size: 0.9rem;
-  color: #999;
-}
-
-.text-success {
-  color: #4caf50;
-}
-
-.text-danger {
-  color: #f44336;
-}
-
-.quick-actions {
-  display: none;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: white;
-  border-top: 1px solid #eef2f6;
-  padding: 10px;
-  justify-content: space-around;
-  z-index: 1000;
-}
-
-.quick-action-btn {
-  background: none;
-  border: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  color: #666;
-  cursor: pointer;
-  padding: 5px 10px;
-  border-radius: 5px;
-}
-
-.quick-action-btn:hover {
-  background: #f5f5f5;
+.quick-action-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none; /* Prevents any click events */
 }
 
 .quick-action-btn i {

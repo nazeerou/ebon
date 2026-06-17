@@ -13,70 +13,102 @@
       <button @click="loadDashboardData" class="btn-primary">Jaribu Tena</button>
     </div>
 
-    <!-- Dashboard Content - 4 cards -->
+    <!-- Dashboard Content -->
+
     <div v-else class="dashboard-content">
-      <div class="cards-grid">
-        <!-- Card 1: Total Machines -->
-        <div class="stat-card">
-          <div class="card-left">
-            <div class="card-icon blue">
-              <i class="fas fa-microchip"></i>
-            </div>
-          </div>
-          <div class="card-right">
-            <div class="card-value">{{ formatNumber(dashboardData.total_machines ?? 0) }}</div>
-            <div class="card-label">Jumla ya Mashine</div>
-            <div class="card-badge">
-              <i class="fas fa-check-circle"></i>
-              {{ formatNumber(dashboardData.active_machines ?? 0) }} hai
-            </div>
-          </div>
-        </div>
+      <!-- Admin view: 4 cards -->
+      <template v-if="isAdmin">
+        <h4>Karibu, {{ userName }}</h4>
 
-        <!-- Card 2: Branches -->
-        <div class="stat-card">
-          <div class="card-left">
-            <div class="card-icon green">
-              <i class="fas fa-store"></i>
+        <div class="cards-grid">
+          <!-- Card 1: Total Machines -->
+          <div class="stat-card">
+            <div class="card-left">
+              <div class="card-icon blue">
+                <i class="fas fa-microchip"></i>
+              </div>
+            </div>
+            <div class="card-right">
+              <div class="card-value">{{ formatNumber(dashboardData.total_machines ?? 0) }}</div>
+              <div class="card-label">Jumla ya Mashine</div>
+              <div class="card-badge">
+                <i class="fas fa-check-circle"></i>
+                {{ formatNumber(dashboardData.active_machines ?? 0) }} hai
+              </div>
             </div>
           </div>
-          <div class="card-right">
-            <div class="card-value">{{ formatNumber(dashboardData.branch_count ?? 0) }}</div>
-            <div class="card-label">Matawi Yote</div>
-            <div class="card-badge"><i class="fas fa-building"></i> Matawi ya Bonanza</div>
-          </div>
-        </div>
 
-        <!-- Card 3: Total Revenue (All time) -->
-        <div class="stat-card">
-          <div class="card-left">
-            <div class="card-icon orange">
-              <i class="fas fa-chart-line"></i>
+          <!-- Card 2: Branches -->
+          <div class="stat-card">
+            <div class="card-left">
+              <div class="card-icon green">
+                <i class="fas fa-store"></i>
+              </div>
+            </div>
+            <div class="card-right">
+              <div class="card-value">{{ formatNumber(dashboardData.branch_count ?? 0) }}</div>
+              <div class="card-label">Matawi Yote</div>
+              <div class="card-badge"><i class="fas fa-building"></i> Matawi ya Bonanza</div>
             </div>
           </div>
-          <div class="card-right">
-            <div class="card-label">Jumla ya Mapato</div>
-            <div class="card-value">{{ formatCurrency(dashboardData.total_collections ?? 0) }}</div>
-            <div class="card-badge"><i class="fas fa-clock"></i> Mwaka huu</div>
-          </div>
-        </div>
 
-        <!-- Card 4: Today's Revenue -->
-        <div class="stat-card">
-          <div class="card-left">
-            <div class="card-icon purple">
-              <i class="fas fa-calendar-day"></i>
+          <!-- Card 3: Total Revenue -->
+          <div class="stat-card">
+            <div class="card-left">
+              <div class="card-icon orange">
+                <i class="fas fa-chart-line"></i>
+              </div>
+            </div>
+            <div class="card-right">
+              <div class="card-label">Jumla ya Mapato</div>
+              <div class="card-value">
+                {{ formatCurrency(dashboardData.total_collections ?? 0) }}
+              </div>
+              <div class="card-badge"><i class="fas fa-clock"></i> Mwaka huu</div>
             </div>
           </div>
-          <div class="card-right">
-            <div class="card-label">Mapato ya Leo</div>
-            <div class="card-value">{{ formatCurrency(dashboardData.today_revenue ?? 0) }}</div>
-            <div class="card-badge positive">
-              <i class="fas fa-arrow-up"></i> {{ todayGrowth }}% kuliko jana
+
+          <!-- Card 4: Today's Revenue -->
+          <div class="stat-card">
+            <div class="card-left">
+              <div class="card-icon purple">
+                <i class="fas fa-calendar-day"></i>
+              </div>
+            </div>
+            <div class="card-right">
+              <div class="card-label">Mapato ya Leo</div>
+              <div class="card-value">{{ formatCurrency(dashboardData.today_revenue ?? 0) }}</div>
+              <div class="card-badge positive">
+                <i class="fas fa-arrow-up"></i> {{ todayGrowth }}% kuliko jana
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </template>
+
+      <!-- Manager view: welcome message -->
+      <template v-else-if="isManager">
+        <div class="manager-welcome">
+          <div class="welcome-card">
+            <div class="welcome-icon">
+              <i class="fas fa-user-tie"></i>
+            </div>
+            <h2>Karibu, {{ userName }}</h2>
+            <p class="subtitle">Mfumo wa utunzaji Taarifa za biashara</p>
+            <div class="quick-links">
+              <router-link to="/readings/ocr" class="quick-link">
+                <i class="fas fa-camera"></i> Soma Meter
+              </router-link>
+              <router-link to="/machines" class="quick-link">
+                <i class="fas fa-microchip"></i> Mashine Zote
+              </router-link>
+              <router-link to="/reports/daily" class="quick-link">
+                <i class="fas fa-calendar-day"></i> Ripoti ya Siku
+              </router-link>
+            </div>
+          </div>
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -84,11 +116,26 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useDashboardStore } from '@/stores/dashboard'
+import { useAuthStore } from '@/stores/auth'
 import { formatCurrency, formatNumber } from '@/utils/formatters'
 
 const dashboardStore = useDashboardStore()
+const authStore = useAuthStore()
+
 const dashboardData = computed(() => dashboardStore.dashboardData)
 const todayGrowth = computed(() => dashboardData.value.today_growth ?? 0)
+
+// Role checks
+const isAdmin = computed(() => authStore.user?.role === 'admin')
+const isManager = computed(() => authStore.user?.role === 'manager')
+
+// Manager name
+const userName = computed(() => {
+  if (authStore.user) {
+    return authStore.user.first_name || authStore.user.name || authStore.user.username || 'Mtumiaji'
+  }
+  return 'Mtumiaji'
+})
 
 const loadDashboardData = async () => {
   try {
@@ -107,8 +154,6 @@ onMounted(() => {
 /* Base */
 .dashboard {
   min-height: 100vh;
-  /* background: #f0f2f8; */
-  /* padding: 2rem; */
 }
 
 .dashboard-content {
@@ -116,7 +161,7 @@ onMounted(() => {
   margin: 0 auto;
 }
 
-/* 4-column grid */
+/* 4-column grid (admin) */
 .cards-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -135,13 +180,10 @@ onMounted(() => {
   transition: all 0.25s ease;
   border: 1px solid rgba(0, 0, 0, 0.03);
 }
-
 .stat-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 16px 28px rgba(0, 0, 0, 0.08);
 }
-
-/* Left icon area */
 .card-left {
   flex-shrink: 0;
 }
@@ -168,8 +210,6 @@ onMounted(() => {
 .card-icon.purple {
   background: linear-gradient(135deg, #ab47bc, #4a148c);
 }
-
-/* Right content */
 .card-right {
   flex: 1;
   min-width: 0;
@@ -208,6 +248,65 @@ onMounted(() => {
 }
 .card-badge i {
   font-size: 0.7rem;
+}
+
+/* Manager welcome */
+.manager-welcome {
+  /* display: flex; */
+  justify-content: center;
+  align-items: center;
+  /* min-height: 60vh; */
+  /* padding: 2rem; */
+}
+.welcome-card {
+  background: white;
+  /* border-radius: 2rem; */
+  padding: 0.2rem 1rem;
+  text-align: center;
+  /* max-width: 600px; */
+  width: 100%;
+  /* box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08); */
+}
+.welcome-icon {
+  font-size: 3rem;
+  color: #1e88e5;
+  margin-bottom: 1rem;
+}
+.welcome-card h1 {
+  font-size: 1.2rem;
+  color: #1a2634;
+  margin-bottom: 0.5rem;
+}
+.subtitle {
+  font-size: 1.1rem;
+  color: #5e6f8d;
+  margin-bottom: 2rem;
+}
+.quick-links {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.quick-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  background: #f0f4f8;
+  border-radius: 2rem;
+  color: #1a2634;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.quick-link:hover {
+  background: #1e88e5;
+  color: white;
+  transform: translateY(-2px);
+}
+.quick-link i {
+  font-size: 1rem;
 }
 
 /* Loading & Error */
@@ -262,11 +361,8 @@ onMounted(() => {
   background: #0b5e9e;
 }
 
-/* Responsive breakpoints */
+/* Responsive */
 @media (max-width: 1200px) {
-  .dashboard {
-    /* padding: 1.5rem; */
-  }
   .cards-grid {
     gap: 1.25rem;
   }
@@ -281,7 +377,7 @@ onMounted(() => {
 }
 @media (max-width: 640px) {
   .dashboard {
-    padding: 1rem;
+    /* padding: 1rem; */
   }
   .cards-grid {
     grid-template-columns: 1fr;
@@ -304,6 +400,12 @@ onMounted(() => {
   .card-badge {
     font-size: 0.7rem;
     padding: 0.2rem 0.65rem;
+  }
+  .welcome-card {
+    /* padding: 2rem; */
+  }
+  .quick-links {
+    flex-direction: column;
   }
 }
 </style>

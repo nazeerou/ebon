@@ -35,14 +35,14 @@ const handleLogin = async () => {
   debugInfo.value = ''
 
   try {
-    console.log('=== LOGIN ATTEMPT ===')
-    // console.log('Email:', form.email)
-    console.log('API URL:', import.meta.env.VITE_API_URL || 'https://api.ebon.bas.co.tz/api/v1')
+    // console.log('=== LOGIN ATTEMPT ===')
+    console.log('Email:', form.email)
+    // console.log('API URL:', import.meta.env.VITE_API_URL)
 
     // Call login - it returns { success, error } not throws
     const result = await authStore.login(form)
 
-    console.log('Login result:', result)
+    console.log('Login result:', result.success)
 
     if (result.success) {
       // Redirect to dashboard on success
@@ -115,12 +115,6 @@ const handleLogin = async () => {
 
       <form @submit.prevent="handleLogin" class="login-form">
         <!-- Debug Info (only show in development) -->
-        <div v-if="debugInfo && isDev" class="alert alert-info">
-          <strong>Debug Info:</strong>
-          <pre style="font-size: 11px; overflow: auto; max-height: 200px; margin-top: 8px">{{
-            debugInfo
-          }}</pre>
-        </div>
 
         <!-- Error Message -->
         <div v-if="error" class="alert alert-danger">
