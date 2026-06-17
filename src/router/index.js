@@ -1,7 +1,7 @@
 // router/index.js
 
 import { createRouter, createWebHistory } from 'vue-router'
-import MainLayout from '@/components/layout/MainLayout.vue'
+import MainLayout from '@/components/Layout/MainLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 
 // Auth pages
