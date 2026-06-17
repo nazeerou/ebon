@@ -153,7 +153,7 @@ onMounted(() => {
 <style scoped>
 /* Base */
 .dashboard {
-  min-height: 100vh;
+  min-height: 70vh;
 }
 
 .dashboard-content {
@@ -252,10 +252,10 @@ onMounted(() => {
 
 /* Manager welcome */
 .manager-welcome {
-  /* display: flex; */
+  display: flex;
   justify-content: center;
   align-items: center;
-  /* min-height: 60vh; */
+  /* min-height: 40vh; */
   /* padding: 2rem; */
 }
 .welcome-card {
@@ -263,7 +263,7 @@ onMounted(() => {
   /* border-radius: 2rem; */
   padding: 0.2rem 1rem;
   text-align: center;
-  /* max-width: 600px; */
+  max-width: 600px;
   width: 100%;
   /* box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08); */
 }
