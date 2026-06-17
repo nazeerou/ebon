@@ -36,8 +36,8 @@ const handleLogin = async () => {
 
   try {
     console.log('=== LOGIN ATTEMPT ===')
-    console.log('Email:', form.email)
-    // console.log('API URL:', import.meta.env.VITE_API_URL || 'https://web.bas.co.tz/api/v1')
+    // console.log('Email:', form.email)
+    console.log('API URL:', import.meta.env.VITE_API_URL || 'https://api.ebon.bas.co.tz/api/v1')
 
     // Call login - it returns { success, error } not throws
     const result = await authStore.login(form)
