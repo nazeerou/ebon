@@ -413,7 +413,9 @@ const toastIcon = computed(() =>
 // ---------------------------
 const loadBranches = async () => {
   try {
-    const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
+    // const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
+    const API_URL = import.meta.env.VITE_API_URL || 'https://api.ebon.bas.co.tz/api/v1'
+
     const response = await axios.get(`${API_URL}/branches`)
     // API returns { data: [...] }
     if (response.data && response.data.data) {
