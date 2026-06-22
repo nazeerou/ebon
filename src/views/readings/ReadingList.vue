@@ -720,7 +720,7 @@ onUnmounted(() => {
   align-items: center;
 }
 .reading-image {
-  max-width: 100%;
+  max-width: 130%;
   max-height: 250px;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
@@ -2223,6 +2223,7 @@ onUnmounted(() => {
 
   .reading-image {
     max-height: 180px;
+    max-width: 100%;
   }
 
   .difference-banner {
@@ -2291,7 +2292,7 @@ onUnmounted(() => {
   }
 
   .reading-image {
-    max-height: 150px;
+    /* max-height: 150px; */
   }
 
   .difference-text .value {
