@@ -36,33 +36,16 @@
         <div v-if="machineDetailsFound && identifiedMachine" class="machine-details">
           <div class="detail-card">
             <h4>Taarifa za Mashine</h4>
-            <!-- <div class="detail-row">
-              <span class="label">Code:</span>
-              <span class="value">{{ identifiedMachine.machine_code }}</span>
-            </div> -->
-            <!-- <div class="detail-row">
-              <span class="label">Jina:</span>
-              <span class="value">{{ identifiedMachine.machine_name }}</span>
-            </div> -->
             <div class="detail-row">
               <span class="label">Serial:</span>
               <span class="value">{{ identifiedMachine.serial_number }}</span>
             </div>
-            <!-- <div class="detail-row">
-              <span class="label">Tawi:</span>
-              <span class="value">{{ identifiedMachine.branch?.branch_name || '-' }}</span>
-            </div> -->
             <div class="detail-row">
               <span class="label">Mahali:</span>
               <span class="value">{{ identifiedMachine.branch?.address || '-' }}</span>
             </div>
             <div class="detail-row" v-if="previousReading !== null && previousReading !== 0">
-              <!-- <span class="label">Usomaji uliopita:</span> -->
-              <!-- <span class="value">{{ formatNumber(previousReading) }}</span> -->
-            </div>
-            <div class="detail-row" v-else>
-              <!-- <span class="label">Usomaji uliopita:</span> -->
-              <!-- <span class="value text-muted">Hakuna usomaji uliopita</span> -->
+              <!-- hidden, but we keep for structure -->
             </div>
           </div>
         </div>
@@ -80,7 +63,7 @@
             type="number"
             v-model.number="manualReading"
             class="form-control"
-            placeholder="Ingiza namba ya usomaji "
+            placeholder="Ingiza namba ya usomaji"
             step="1"
             min="0"
             @input="validateManualReading"
@@ -92,9 +75,8 @@
         </div>
 
         <!-- Camera / Photo Capture -->
-        <!-- Camera / Photo Capture -->
         <div class="form-group">
-          <label>Picha ya Mita <span class="required">*</span> </label>
+          <label>Picha ya Mita <span class="required">*</span></label>
           <div class="camera-upload-wrapper">
             <button type="button" class="btn-camera" @click="openCamera" :disabled="saved">
               <i class="fas fa-camera"></i> Piga Picha
@@ -109,46 +91,9 @@
               @change="handleFileSelect"
               accept="image/*"
               style="display: none"
-              required
             />
           </div>
-          <!-- Camera Modal (only this part changed) -->
-          <div v-if="showCameraModal" class="modal-overlay" @click="closeCamera">
-            <div class="camera-modal" @click.stop>
-              <div class="camera-header">
-                <h3>Piga Picha ya Mita</h3>
-                <button class="close-btn" @click="closeCamera"><i class="fas fa-times"></i></button>
-              </div>
-              <div class="camera-body">
-                <video
-                  v-if="!capturedImage"
-                  ref="videoElement"
-                  autoplay
-                  playsinline
-                  class="camera-video"
-                ></video>
-                <img v-else :src="capturedImage" class="captured-preview" />
-              </div>
-              <div class="camera-footer">
-                <div v-if="!capturedImage" class="camera-actions">
-                  <button v-if="hasMultipleCameras" class="btn-secondary" @click="switchCamera">
-                    <i class="fas fa-sync-alt"></i> Badilisha
-                  </button>
-                  <button class="btn-primary" @click="capturePhoto">
-                    <i class="fas fa-camera"></i> Piga
-                  </button>
-                </div>
-                <div v-else class="camera-actions">
-                  <button class="btn-secondary" @click="retakePhoto">
-                    <i class="fas fa-redo"></i> Tena
-                  </button>
-                  <button class="btn-success" @click="acceptPhoto">
-                    <i class="fas fa-check"></i> Thibitisha
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+
           <!-- Image Preview with Reading Display -->
           <div v-if="imagePreview" class="image-preview-wrapper">
             <div class="image-preview-card">
@@ -168,9 +113,6 @@
                 <i class="fas fa-times"></i>
               </button>
             </div>
-            <!-- <p class="image-caption" v-if="manualReading !== null && manualReading !== undefined">
-              Usomaji ulioingizwa: <strong>{{ formatNumber(manualReading) }} km</strong>
-            </p> -->
           </div>
         </div>
 
@@ -251,15 +193,12 @@
             <button class="btn-primary" @click="resetAll">
               <i class="fas fa-plus"></i> Usomaji Mpya
             </button>
-            <router-link to="/readings" class="btn-secondary">
-              <i class="fas fa-list"></i> Orodha ya Usomaji
-            </router-link>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Camera Modal -->
+    <!-- Camera Modal (single instance) -->
     <div v-if="showCameraModal" class="modal-overlay" @click="closeCamera">
       <div class="camera-modal" @click.stop>
         <div class="camera-header">
@@ -470,7 +409,6 @@ const findMachineByCode = async (code) => {
   machineNotFound.value = false
 
   try {
-    // Call API with machine_code parameter
     const response = await machineStore.fetchMachines({ machine_code: code.trim().toUpperCase() })
     const data = response.data || response
     let machines = []
@@ -488,7 +426,6 @@ const findMachineByCode = async (code) => {
       machineDetailsFound.value = true
       machineNotFound.value = false
 
-      // Fetch previous reading for this machine
       try {
         const lastReading = await readingStore.fetchPreviousReadingByMachineCode(
           code.trim().toUpperCase(),
@@ -516,7 +453,6 @@ const findMachineByCode = async (code) => {
   }
 }
 
-// Debounced wrapper
 const debouncedFindMachine = debounce((e) => {
   const code = machineCodeInput.value
   findMachineByCode(code)
@@ -541,12 +477,10 @@ const validateManualReading = () => {
   manualReadingError.value = ''
 }
 
-// Watch for manual reading changes
 watch(manualReading, () => {
   validateManualReading()
 })
 
-// Reset manual reading
 const resetManualReading = () => {
   manualReading.value = null
   manualReadingError.value = ''
@@ -638,6 +572,7 @@ const retakePhoto = () => {
 }
 
 const acceptPhoto = () => {
+  // Convert data URL to File
   const base64Data = capturedImage.value.split(',')[1]
   const blob = atob(base64Data)
   const arrayBuffer = new ArrayBuffer(blob.length)
@@ -646,9 +581,8 @@ const acceptPhoto = () => {
     uint8Array[i] = blob.charCodeAt(i)
   }
   const file = new File([uint8Array], `camera-${Date.now()}.jpg`, { type: 'image/jpeg' })
-  const preview = capturedImage.value
   imageFile.value = file
-  imagePreview.value = preview
+  imagePreview.value = capturedImage.value
   closeCamera()
 }
 
@@ -658,7 +592,6 @@ const openConfirmationModal = async () => {
     showToastMessage('Tafadhali ingiza Code ya mashine', 'error')
     return
   }
-  // Ensure machine is found (if not, search again)
   if (!identifiedMachine.value) {
     await findMachineByCode(machineCodeInput.value)
     if (!identifiedMachine.value) {
@@ -681,7 +614,6 @@ const openConfirmationModal = async () => {
   showConfirmationModal.value = true
 }
 
-// Close confirmation modal
 const closeConfirmationModal = () => {
   showConfirmationModal.value = false
 }
@@ -690,26 +622,35 @@ const closeConfirmationModal = () => {
 const confirmSave = async () => {
   saving.value = true
   try {
-    const payload = {
-      machine_id: identifiedMachine.value.id,
-      current_reading: currentReadingValue.value,
-      reading_date: readingDate.value || new Date().toISOString().slice(0, 10),
-    }
-
-    let response
+    // Prepare payload using FormData if image exists
+    let payload
     if (imageFile.value) {
       const formData = new FormData()
       formData.append('machine_id', identifiedMachine.value.id)
       formData.append('current_reading', currentReadingValue.value)
       formData.append('reading_date', readingDate.value || new Date().toISOString().slice(0, 10))
       formData.append('image', imageFile.value)
-      response = await readingStore.createReadingWithImage(formData)
+      payload = formData
     } else {
-      response = await readingStore.createReading(payload)
+      payload = {
+        machine_id: identifiedMachine.value.id,
+        current_reading: currentReadingValue.value,
+        reading_date: readingDate.value || new Date().toISOString().slice(0, 10),
+      }
     }
 
+    const response = await readingStore.createReading(payload)
+
     if (response.success) {
-      showToastMessage('Usomaji umehifadhiwa kwa mafanikio!', 'success')
+      // Check if there was an image warning
+      if (response.status === 'warning') {
+        showToastMessage(
+          response.message || 'Usomaji umehifadhiwa, lakini picha haikupakiwa.',
+          'warning',
+        )
+      } else {
+        showToastMessage('Usomaji umehifadhiwa kwa mafanikio!', 'success')
+      }
       saved.value = true
       closeConfirmationModal()
     } else {
@@ -717,7 +658,8 @@ const confirmSave = async () => {
     }
   } catch (err) {
     console.error(err)
-    showToastMessage(err.response?.data?.message || 'Imeshindwa kuhifadhi usomaji', 'error')
+    const message = err.response?.data?.message || err.message || 'Imeshindwa kuhifadhi usomaji'
+    showToastMessage(message, 'error')
   } finally {
     saving.value = false
   }
@@ -738,23 +680,23 @@ const resetAll = () => {
 }
 
 // Toast helper
-const showToastMessage = (msg, type) => {
+const showToastMessage = (msg, type = 'success') => {
   toastMessage.value = msg
   toastType.value = type
   showToast.value = true
   setTimeout(() => {
     showToast.value = false
-  }, 3000)
+  }, 4000)
 }
 
-// Cleanup camera and debounce on unmount
+// Cleanup
 onUnmounted(() => {
   stopCamera()
   debouncedFindMachine.cancel()
 })
 
 onMounted(() => {
-  // No need to load machines initially now
+  // no-op
 })
 </script>
 

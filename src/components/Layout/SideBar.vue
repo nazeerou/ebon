@@ -48,7 +48,7 @@
             <i class="fas fa-list"></i>
             <span>Mashine Zote</span>
           </router-link>
-          <router-link
+          <!-- <router-link
             to="/machines/create"
             class="submenu-item"
             active-class="active"
@@ -56,7 +56,7 @@
           >
             <i class="fas fa-plus-circle"></i>
             <span>Ongeza Mashine</span>
-          </router-link>
+          </router-link> -->
         </div>
       </div>
 
@@ -79,7 +79,7 @@
             <i class="fas fa-list"></i>
             <span>Matawi Yote</span>
           </router-link>
-          <router-link
+          <!-- <router-link
             to="/branches/create"
             class="submenu-item"
             active-class="active"
@@ -87,7 +87,7 @@
           >
             <i class="fas fa-plus-circle"></i>
             <span>Ongeza Tawi</span>
-          </router-link>
+          </router-link> -->
         </div>
       </div>
 
@@ -530,6 +530,7 @@ onUnmounted(() => {
 
   .sidebar.sidebar-closed {
     transform: translateX(-100%);
+    display: none;
   }
 
   /* Main content adjustment for mobile */

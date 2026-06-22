@@ -137,12 +137,6 @@
         </form>
       </div>
     </div>
-
-    <!-- Toast Notification -->
-    <div v-if="showToast" class="toast-notification" :class="toastType">
-      <i :class="toastIcon"></i>
-      <span>{{ toastMessage }}</span>
-    </div>
   </header>
 </template>
 
@@ -150,14 +144,12 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { useNotificationStore } from '@/stores/notification'
 import { formatDate } from '@/utils/formatters'
 import api from '@/services/api'
 import Swal from 'sweetalert2'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const notificationStore = useNotificationStore()
 
 // State
 const searchQuery = ref('')
@@ -268,9 +260,6 @@ const userAvatar = computed(() => {
   return '/assets/images/avator_.png'
 })
 
-const notifications = computed(() => notificationStore.notifications || [])
-const unreadNotifications = computed(() => notificationStore.unreadCount || 0)
-
 // Password validations
 const passwordValidations = computed(() => {
   const password = passwordForm.value.new_password || ''
@@ -313,31 +302,6 @@ const performSearch = () => {
 const performMobileSearch = () => {
   performSearch()
   closeMobileSearch()
-}
-
-const getNotificationIcon = (type) => {
-  const icons = {
-    payment: 'fas fa-money-bill',
-    loan: 'fas fa-hand-holding-usd',
-    customer: 'fas fa-user',
-    system: 'fas fa-cog',
-    warning: 'fas fa-exclamation-triangle',
-  }
-  return icons[type] || 'fas fa-bell'
-}
-
-const handleNotificationClick = (notification) => {
-  if (!notification.read) {
-    notificationStore.markAsRead(notification.id)
-  }
-  if (notification.link) {
-    router.push(notification.link)
-  }
-  showNotifications.value = false
-}
-
-const markAllAsRead = () => {
-  notificationStore.markAllAsRead()
 }
 
 const formatTime = (timestamp) => {
@@ -513,9 +477,6 @@ onMounted(async () => {
   window.addEventListener('resize', handleResize)
   document.addEventListener('click', handleClickOutside)
   await fetchCurrentUser()
-  if (notificationStore.fetchNotifications) {
-    notificationStore.fetchNotifications()
-  }
 })
 
 onUnmounted(() => {
