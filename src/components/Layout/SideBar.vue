@@ -48,15 +48,15 @@
             <i class="fas fa-list"></i>
             <span>Mashine Zote</span>
           </router-link>
-          <!-- <router-link
-            to="/machines/create"
+          <router-link
+            to="/branches-machines"
             class="submenu-item"
             active-class="active"
             @click="closeSidebarOnMobile"
           >
-            <i class="fas fa-plus-circle"></i>
-            <span>Ongeza Mashine</span>
-          </router-link> -->
+            <i class="fas fa-eye"></i>
+            <span>Mashine na Mahali Zilipo</span>
+          </router-link>
         </div>
       </div>
 

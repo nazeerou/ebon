@@ -30,6 +30,7 @@ import OCRScanner from '@/views/readings/OCRScanner.vue'
 
 // // Collection pages
 import CollectionList from '@/views/collections/CollectionList.vue'
+import BranchesList from '@/views/machines/BranchesList.vue'
 // import CollectionForm from '@/views/collections/CollectionForm.vue'
 
 // // Expense pages
@@ -95,15 +96,15 @@ const routes = [
           icon: 'chart-pie',
         },
       },
-      // {
-      //   path: 'profile',
-      //   name: 'Profile',
-      //   component: Profile,
-      //   meta: {
-      //     title: 'Wasifu Wangu',
-      //     icon: 'user-circle',
-      //   },
-      // },
+      {
+        path: 'branches-machines',
+        name: 'BranchesMachines',
+        component: BranchesList,
+        meta: {
+          title: 'Braches and Machines ',
+          icon: 'user-circle',
+        },
+      },
       {
         path: 'machines',
         name: 'Machines',

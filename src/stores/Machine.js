@@ -2,8 +2,50 @@
 import { defineStore } from 'pinia'
 import axios from 'axios'
 
-// const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
-const API_URL = import.meta.env.VITE_API_URL || 'https://api.ebon.bas.co.tz/api/v1'
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
+// const API_URL = import.meta.env.VITE_API_URL || 'https://api.ebon.bas.co.tz/api/v1'
+
+/**
+ * Build a FormData payload when files are present or when explicitly requested.
+ * Laravel requires POST + _method=PUT for multipart updates.
+ */
+function buildFormData(data, method = null) {
+  const fd = new FormData()
+
+  const appendValue = (key, value) => {
+    if (value === undefined || value === null) return
+    if (Array.isArray(value)) {
+      value.forEach((v, i) => {
+        // Support arrays like materials[] and photos[index]
+        if (value.length && typeof v === 'object' && v instanceof File) {
+          fd.append(`${key}[${i}]`, v)
+        } else {
+          fd.append(`${key}[]`, v)
+        }
+      })
+    } else if (typeof value === 'object' && !(value instanceof File) && !(value instanceof Blob)) {
+      fd.append(key, JSON.stringify(value))
+    } else {
+      fd.append(key, value)
+    }
+  }
+
+  Object.entries(data).forEach(([key, value]) => appendValue(key, value))
+
+  if (method) fd.append('_method', method)
+  return fd
+}
+
+function containsFiles(data) {
+  if (!data || typeof data !== 'object') return false
+  return Object.values(data).some((value) => {
+    if (value instanceof File || value instanceof Blob) return true
+    if (Array.isArray(value)) {
+      return value.some((v) => v instanceof File || v instanceof Blob)
+    }
+    return false
+  })
+}
 
 export const useMachineStore = defineStore('machine', {
   state: () => ({
@@ -48,9 +90,6 @@ export const useMachineStore = defineStore('machine', {
 
         if (response.data.success) {
           this.machines = response.data.data.data || response.data.data || []
-          if (response.data.data.current_page !== undefined) {
-            // You may store pagination separately if needed
-          }
           return response.data
         }
         return response.data
@@ -117,13 +156,26 @@ export const useMachineStore = defineStore('machine', {
       }
     },
 
-    // Create a new machine
+    // Create a new machine (supports FormData when photos/files are included)
     async createMachine(machineData) {
       try {
-        const response = await axios.post(`${API_URL}/machines`, machineData)
+        const isFormData = machineData instanceof FormData
+        const hasFiles = !isFormData && containsFiles(machineData)
+
+        let payload = machineData
+        let config = {}
+
+        if (hasFiles) {
+          payload = buildFormData(machineData)
+          config.headers = { 'Content-Type': 'multipart/form-data' }
+        } else if (isFormData) {
+          config.headers = { 'Content-Type': 'multipart/form-data' }
+        }
+
+        const response = await axios.post(`${API_URL}/machines`, payload, config)
 
         if (response.data.success) {
-          await this.fetchMachines() // refresh list
+          await this.fetchMachines()
           await this.fetchStatistics()
         }
         return response.data
@@ -133,10 +185,42 @@ export const useMachineStore = defineStore('machine', {
       }
     },
 
-    // Update an existing machine
+    // Update an existing machine (supports FormData when photos/files are included)
     async updateMachine(id, machineData) {
       try {
-        const response = await axios.put(`${API_URL}/machines/${id}`, machineData)
+        const isFormData = machineData instanceof FormData
+        const hasFiles = !isFormData && containsFiles(machineData)
+
+        let payload = machineData
+        let config = {}
+
+        if (hasFiles) {
+          // Laravel method spoofing for multipart PUT
+          payload = buildFormData(machineData, 'PUT')
+          config.headers = { 'Content-Type': 'multipart/form-data' }
+          const response = await axios.post(`${API_URL}/machines/${id}`, payload, config)
+
+          if (response.data.success) {
+            await this.fetchMachines()
+            if (this.currentMachine?.id === id) await this.fetchMachine(id)
+            await this.fetchStatistics()
+          }
+          return response.data
+        }
+
+        // Regular JSON update
+        if (isFormData) {
+          config.headers = { 'Content-Type': 'multipart/form-data' }
+          const response = await axios.post(`${API_URL}/machines/${id}`, payload, config)
+          if (response.data.success) {
+            await this.fetchMachines()
+            if (this.currentMachine?.id === id) await this.fetchMachine(id)
+            await this.fetchStatistics()
+          }
+          return response.data
+        }
+
+        const response = await axios.put(`${API_URL}/machines/${id}`, payload, config)
 
         if (response.data.success) {
           await this.fetchMachines()
