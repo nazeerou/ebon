@@ -56,7 +56,7 @@
               <th>Tawi</th>
               <th>Namba ya Serial</th>
               <th>Hali</th>
-              <th>Tarehe ya Ufungaji</th>
+              <th class="hide-sm">Tarehe ya Ufungaji</th>
               <th>Vitendo</th>
             </tr>
           </thead>
@@ -91,7 +91,7 @@
                   getStatusText(machine.status)
                 }}</span>
               </td>
-              <td>
+              <td class="hide-sm">
                 <div class="date-info">
                   <span class="date">{{ formatDate(machine.installation_date) }}</span>
                   <span class="time">Imesajiliwa: {{ formatDate(machine.created_at) }}</span>
@@ -613,7 +613,7 @@
                 />
               </div>
             </div>
-            <div class="form-group" style="margin-top: 1rem">
+            <div class="form-group form-group-full" style="margin-top: 1rem">
               <label>Maelezo ya Ziada</label>
               <textarea
                 v-model="transferForm.notes"
@@ -712,8 +712,8 @@ import debounce from 'lodash/debounce'
 import axios from 'axios'
 
 const machineStore = useMachineStore()
-const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
-// const API_URL = import.meta.env.VITE_API_URL || 'https://ebon.bas.co.tz/api/v1'
+// const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
+const API_URL = import.meta.env.VITE_API_URL || 'https://ebon.bas.co.tz/api/v1'
 
 // ---- State ----
 const machines = ref([])
@@ -1394,6 +1394,9 @@ onUnmounted(() => {
   flex-wrap: wrap;
   gap: 1rem;
 }
+.header-left {
+  min-width: 0;
+}
 .header-left h1 {
   font-size: 1.75rem;
   color: #1e293b;
@@ -1415,6 +1418,7 @@ onUnmounted(() => {
 .search-wrapper {
   position: relative;
   width: 280px;
+  max-width: 100%;
 }
 .search-icon {
   position: absolute;
@@ -1423,14 +1427,17 @@ onUnmounted(() => {
   transform: translateY(-50%);
   color: #94a3b8;
   font-size: 0.875rem;
+  pointer-events: none;
 }
 .search-input {
+  width: 100%;
   padding: 0.6rem 2rem 0.6rem 2.5rem;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   font-size: 0.875rem;
   transition: all 0.2s;
   background: white;
+  box-sizing: border-box;
 }
 .search-input:focus {
   outline: none;
@@ -1467,6 +1474,7 @@ onUnmounted(() => {
   background: #3b82f6;
   color: white;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  white-space: nowrap;
 }
 .btn-primary:hover {
   background: #2563eb;
@@ -1481,10 +1489,13 @@ onUnmounted(() => {
   border: 1px solid #eef2f6;
 }
 .table-responsive {
-  /* overflow-x: auto; */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 1rem 1rem 0 0;
 }
 .machines-table {
   width: 100%;
+  min-width: 900px;
   border-collapse: collapse;
   font-size: 0.875rem;
 }
@@ -1495,6 +1506,7 @@ onUnmounted(() => {
   color: #1e293b;
   font-weight: 600;
   border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
 }
 .machines-table td {
   padding: 1rem;
@@ -1538,6 +1550,7 @@ onUnmounted(() => {
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 500;
+  white-space: nowrap;
 }
 .status-badge.active {
   background: #dbeafe;
@@ -1647,15 +1660,20 @@ onUnmounted(() => {
 .bulk-buttons {
   display: flex;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 .btn-bulk {
-  padding: 0.25rem 1rem;
+  padding: 0.4rem 1rem;
   border-radius: 8px;
   background: white;
   border: 1px solid #cbd5e1;
   font-size: 0.75rem;
   cursor: pointer;
   transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
 }
 .btn-bulk:hover {
   background: #f1f5f9;
@@ -1678,6 +1696,7 @@ onUnmounted(() => {
 .pagination-info {
   font-size: 0.875rem;
   color: #64748b;
+  text-align: center;
 }
 .pagination-controls {
   display: flex;
@@ -1686,6 +1705,8 @@ onUnmounted(() => {
 .pagination-buttons {
   display: flex;
   gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 .pagination-btn {
   min-width: 36px;
@@ -1763,6 +1784,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.85rem;
+  min-width: 0;
 }
 .modal-header-icon {
   width: 42px;
@@ -1775,6 +1797,7 @@ onUnmounted(() => {
   justify-content: center;
   font-size: 1.1rem;
   box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+  flex-shrink: 0;
 }
 .modal-header-icon.view-icon {
   background: linear-gradient(135deg, #0ea5e9, #0284c7);
@@ -1794,6 +1817,8 @@ onUnmounted(() => {
   font-size: 0.75rem;
   color: #64748b;
   margin: 0.15rem 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .close-btn {
   background: none;
@@ -1805,6 +1830,7 @@ onUnmounted(() => {
   height: 32px;
   border-radius: 8px;
   transition: all 0.2s;
+  flex-shrink: 0;
 }
 .close-btn:hover {
   background: #fee2e2;
@@ -1907,6 +1933,7 @@ onUnmounted(() => {
   background: #f8fafc;
   border-radius: 10px;
   border: 1px solid #eef2f6;
+  min-width: 0;
 }
 .detail-label {
   font-size: 0.7rem;
@@ -1919,6 +1946,7 @@ onUnmounted(() => {
   font-size: 0.9rem;
   color: #0f172a;
   font-weight: 500;
+  word-break: break-word;
 }
 .detail-value.mono {
   font-family: monospace;
@@ -1987,6 +2015,7 @@ onUnmounted(() => {
   padding: 0.6rem 2.2rem 0.6rem 0.85rem;
   flex: 1;
   position: relative;
+  min-width: 0;
 }
 .transfer-route {
   display: flex;
@@ -1995,6 +2024,7 @@ onUnmounted(() => {
   font-weight: 600;
   color: #0f172a;
   font-size: 0.85rem;
+  flex-wrap: wrap;
 }
 .transfer-route i {
   color: #f59e0b;
@@ -2114,6 +2144,7 @@ onUnmounted(() => {
 .form-group {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 .form-group label {
   display: block;
@@ -2382,6 +2413,7 @@ textarea.form-control {
   gap: 0.5rem;
   z-index: 2100;
   border-left: 4px solid;
+  max-width: calc(100vw - 3rem);
 }
 .toast-notification.success {
   border-left-color: #10b981;
@@ -2413,7 +2445,31 @@ textarea.form-control {
   }
 }
 
-/* Responsive */
+/* ============================
+   RESPONSIVE
+   ============================ */
+
+/* Tablet — 992px */
+@media (max-width: 992px) {
+  .machine-list-container {
+    padding: 0.9rem;
+  }
+  .header-left h1 {
+    font-size: 1.5rem;
+  }
+  .machines-table {
+    min-width: 820px;
+  }
+  .machines-table th,
+  .machines-table td {
+    padding: 0.85rem 0.75rem;
+  }
+  .view-modal {
+    max-width: 700px;
+  }
+}
+
+/* Mobile — 768px */
 @media (max-width: 768px) {
   .machine-list-container {
     padding: 0.75rem;
@@ -2421,44 +2477,307 @@ textarea.form-control {
   .page-header {
     flex-direction: column;
     align-items: stretch;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .header-left {
+    width: 100%;
+  }
+  .header-left h1 {
+    font-size: 1.35rem;
+  }
+  .machine-count {
+    font-size: 0.8rem;
   }
   .header-actions {
-    justify-content: stretch;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
   }
   .search-wrapper {
     width: 100%;
   }
   .btn-primary {
-    flex: 1;
+    width: 100%;
     justify-content: center;
+    padding: 0.7rem 1rem;
+  }
+
+  /* Table shrinks */
+  .machines-table {
+    min-width: 720px;
+    font-size: 0.8rem;
   }
   .machines-table th,
   .machines-table td {
-    padding: 0.75rem;
-  }
-  .checkbox-col {
-    width: 30px;
+    padding: 0.7rem 0.6rem;
   }
   .action-menu {
-    right: -20px;
+    right: -8px;
   }
-  .view-photo-grid {
-    grid-template-columns: repeat(2, 1fr);
+
+  /* Bulk stacks */
+  .bulk-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
   }
-  .view-details-grid {
-    grid-template-columns: 1fr;
+  .bulk-info {
+    justify-content: center;
+    text-align: center;
   }
-}
-@media (max-width: 640px) {
-  .form-grid {
-    grid-template-columns: 1fr;
+  .bulk-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
   }
-  .photo-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .btn-bulk {
+    width: 100%;
+    justify-content: center;
+    padding: 0.5rem 0.75rem;
+  }
+
+  /* Modals as bottom sheet */
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .modal-content,
+  .machine-modal,
+  .view-modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 92vh;
+    border-radius: 1.25rem 1.25rem 0 0;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
+  }
+  .modal-header {
+    border-radius: 1.25rem 1.25rem 0 0;
+    padding: 1rem 1.25rem;
   }
   .modal-body,
   .view-body {
+    padding: 1.25rem;
+  }
+  .modal-header-icon {
+    width: 38px;
+    height: 38px;
+    font-size: 1rem;
+  }
+  .modal-header h3 {
+    font-size: 1rem;
+  }
+  .modal-subtitle {
+    font-size: 0.7rem;
+  }
+
+  /* View grids */
+  .view-photo-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+  .view-details-grid {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  /* Form */
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  .photo-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  /* Modal footer buttons full-width */
+  .modal-footer {
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+    padding-top: 1rem;
+    margin-top: 1rem;
+  }
+  .modal-footer .btn-secondary,
+  .modal-footer .btn-primary,
+  .modal-footer .btn-danger {
+    width: 100%;
+    justify-content: center;
+    padding: 0.75rem 1rem;
+    text-align: center;
+  }
+
+  /* Toast spans width */
+  .toast-notification {
+    left: 1rem;
+    right: 1rem;
+    bottom: 1rem;
+    max-width: none;
+    justify-content: center;
+  }
+
+  /* Pagination */
+  .pagination-buttons {
+    gap: 0.35rem;
+  }
+  .pagination-btn {
+    min-width: 34px;
+    height: 34px;
+    padding: 0 0.4rem;
+    font-size: 0.8rem;
+  }
+
+  /* View photo indicator smaller */
+  .view-photo-badge {
+    font-size: 0.6rem;
+  }
+}
+
+/* Small mobile — 480px */
+@media (max-width: 480px) {
+  .machine-list-container {
+    padding: 0.6rem;
+  }
+  .header-left h1 {
+    font-size: 1.2rem;
+  }
+  .machine-count {
+    font-size: 0.75rem;
+  }
+
+  /* Even tighter table */
+  .machines-table {
+    min-width: 640px;
+    font-size: 0.75rem;
+  }
+  .machines-table th,
+  .machines-table td {
+    padding: 0.6rem 0.5rem;
+  }
+  .machine-code {
+    font-size: 0.68rem;
+  }
+  .time {
+    display: none;
+  }
+  .status-badge {
+    font-size: 0.68rem;
+    padding: 0.2rem 0.55rem;
+  }
+  .checkbox-col {
+    width: 32px;
+  }
+  .action-menu-btn {
+    width: 30px;
+    height: 30px;
+  }
+
+  /* Pagination smaller */
+  .pagination-info,
+  .page-indicator {
+    font-size: 0.7rem;
+  }
+  .pagination-btn {
+    min-width: 30px;
+    height: 30px;
+    padding: 0 0.3rem;
+    font-size: 0.72rem;
+  }
+  .pagination-buttons {
+    gap: 0.25rem;
+  }
+
+  /* Bulk buttons single column */
+  .bulk-buttons {
+    grid-template-columns: 1fr;
+  }
+  .bulk-info {
+    font-size: 0.8rem;
+  }
+
+  /* Modal tighter */
+  .modal-body,
+  .view-body {
     padding: 1rem;
+  }
+  .modal-header {
+    padding: 0.85rem 1rem;
+  }
+  .modal-header-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 0.9rem;
+    border-radius: 10px;
+  }
+  .modal-header h3 {
+    font-size: 0.95rem;
+  }
+  .close-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 1rem;
+  }
+
+  /* Photo grid — 2 columns */
+  .view-photo-grid,
+  .photo-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.4rem;
+  }
+
+  /* Chips smaller */
+  .chip {
+    font-size: 0.72rem;
+    padding: 0.35rem 0.65rem;
+  }
+  .material-tag {
+    font-size: 0.72rem;
+    padding: 0.3rem 0.6rem;
+  }
+  .selected-tag {
+    font-size: 0.72rem;
+  }
+
+  /* Form labels smaller */
+  .form-group label {
+    font-size: 0.75rem;
+  }
+  .form-control {
+    font-size: 0.82rem;
+    padding: 0.55rem 0.65rem;
+  }
+
+  /* Toast */
+  .toast-notification {
+    font-size: 0.82rem;
+    padding: 0.6rem 0.85rem;
+  }
+}
+
+/* Touch-friendly tap targets */
+@media (hover: none) and (pointer: coarse) {
+  .action-menu-btn,
+  .close-btn,
+  .pagination-btn {
+    min-height: 40px;
+  }
+  .action-menu-item {
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* Prevent iOS zoom on input focus */
+@media (max-width: 767px) {
+  .form-control,
+  .search-input {
+    font-size: 16px;
+  }
+}
+
+/* Hide installation date column on very small screens */
+@media (max-width: 480px) {
+  .hide-sm {
+    display: none;
   }
 }
 </style>

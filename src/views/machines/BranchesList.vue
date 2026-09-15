@@ -318,8 +318,8 @@ import { formatDate, formatNumber } from '@/utils/formatters'
 import debounce from 'lodash/debounce'
 import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
-// const API_URL = import.meta.env.VITE_API_URL || 'https://ebon.bas.co.tz/api/v1'
+// const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
+const API_URL = import.meta.env.VITE_API_URL || 'https://ebon.bas.co.tz/api/v1'
 
 // Branches list
 const branches = ref([])
@@ -478,7 +478,9 @@ onMounted(loadBranches)
   margin: 0 auto;
 }
 
-/* Header */
+/* ============================
+   Header
+   ============================ */
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -486,6 +488,9 @@ onMounted(loadBranches)
   margin-bottom: 1.5rem;
   flex-wrap: wrap;
   gap: 1rem;
+}
+.header-left {
+  min-width: 0;
 }
 .header-left h1 {
   font-size: 1.75rem;
@@ -498,9 +503,15 @@ onMounted(loadBranches)
   margin: 0;
   font-size: 0.875rem;
 }
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
 .search-wrapper {
   position: relative;
   width: 280px;
+  max-width: 100%;
 }
 .search-icon {
   position: absolute;
@@ -509,6 +520,7 @@ onMounted(loadBranches)
   transform: translateY(-50%);
   color: #94a3b8;
   font-size: 0.875rem;
+  pointer-events: none;
 }
 .search-input {
   width: 100%;
@@ -518,6 +530,7 @@ onMounted(loadBranches)
   font-size: 0.875rem;
   background: white;
   box-sizing: border-box;
+  font-family: inherit;
 }
 .search-input:focus {
   outline: none;
@@ -533,12 +546,15 @@ onMounted(loadBranches)
   border: none;
   color: #94a3b8;
   cursor: pointer;
+  padding: 0;
 }
 .clear-search:hover {
   color: #ef4444;
 }
 
-/* Branch cards grid */
+/* ============================
+   Branch cards grid
+   ============================ */
 .branches-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
@@ -555,6 +571,7 @@ onMounted(loadBranches)
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  min-width: 0;
 }
 .branch-card:hover {
   transform: translateY(-3px);
@@ -565,6 +582,7 @@ onMounted(loadBranches)
   display: flex;
   align-items: center;
   gap: 0.85rem;
+  min-width: 0;
 }
 .branch-icon {
   width: 44px;
@@ -602,6 +620,7 @@ onMounted(loadBranches)
   transition:
     transform 0.2s,
     color 0.2s;
+  flex-shrink: 0;
 }
 .branch-card:hover .arrow {
   color: #3b82f6;
@@ -621,6 +640,7 @@ onMounted(loadBranches)
   border-radius: 10px;
   background: #f8fafc;
   border: 1px solid #eef2f6;
+  min-width: 0;
 }
 .count-box.total {
   background: #eff6ff;
@@ -649,7 +669,9 @@ onMounted(loadBranches)
   line-height: 1.1;
 }
 
-/* Branch detail */
+/* ============================
+   Branch detail
+   ============================ */
 .branch-detail {
   display: flex;
   flex-direction: column;
@@ -674,16 +696,23 @@ onMounted(loadBranches)
   font-size: 0.85rem;
   font-weight: 500;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 .btn-back:hover {
   background: #f1f5f9;
   border-color: #3b82f6;
   color: #3b82f6;
 }
+.detail-title {
+  min-width: 0;
+}
 .detail-title h2 {
   margin: 0;
   font-size: 1.35rem;
   color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .detail-subtitle {
   margin: 0.15rem 0 0;
@@ -718,6 +747,8 @@ onMounted(loadBranches)
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
+  font-family: inherit;
 }
 .filter-btn:hover {
   border-color: #93c5fd;
@@ -730,7 +761,9 @@ onMounted(loadBranches)
   box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
 }
 
-/* Machines grid */
+/* ============================
+   Machines grid
+   ============================ */
 .machines-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -744,6 +777,7 @@ onMounted(loadBranches)
   cursor: pointer;
   transition: all 0.25s;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  min-width: 0;
 }
 .machine-card:hover {
   transform: translateY(-3px);
@@ -797,6 +831,7 @@ onMounted(loadBranches)
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
+  min-width: 0;
 }
 .machine-info h4 {
   margin: 0;
@@ -818,6 +853,9 @@ onMounted(loadBranches)
   display: flex;
   align-items: center;
   gap: 0.3rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .machine-tags {
   display: flex;
@@ -945,6 +983,7 @@ onMounted(loadBranches)
   display: flex;
   align-items: center;
   gap: 0.85rem;
+  min-width: 0;
 }
 .modal-header-icon {
   width: 42px;
@@ -957,6 +996,7 @@ onMounted(loadBranches)
   justify-content: center;
   font-size: 1.1rem;
   box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+  flex-shrink: 0;
 }
 .modal-header h3 {
   margin: 0;
@@ -967,6 +1007,8 @@ onMounted(loadBranches)
   margin: 0.15rem 0 0;
   font-size: 0.75rem;
   color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .close-btn {
   background: none;
@@ -978,6 +1020,7 @@ onMounted(loadBranches)
   height: 32px;
   border-radius: 8px;
   transition: all 0.2s;
+  flex-shrink: 0;
 }
 .close-btn:hover {
   background: #fee2e2;
@@ -1048,6 +1091,7 @@ onMounted(loadBranches)
   background: #f8fafc;
   border-radius: 10px;
   border: 1px solid #eef2f6;
+  min-width: 0;
 }
 .detail-label {
   font-size: 0.7rem;
@@ -1060,6 +1104,7 @@ onMounted(loadBranches)
   font-size: 0.9rem;
   color: #0f172a;
   font-weight: 500;
+  word-break: break-word;
 }
 .detail-value.mono {
   font-family: monospace;
@@ -1139,36 +1184,325 @@ onMounted(loadBranches)
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .branches-grid {
-    grid-template-columns: 1fr;
+/* ============================
+   RESPONSIVE
+   ============================ */
+
+/* Tablet — 992px */
+@media (max-width: 992px) {
+  .branches-page {
+    padding: 0.9rem;
   }
-  .branch-counts {
-    grid-template-columns: repeat(4, 1fr);
+  .header-left h1 {
+    font-size: 1.5rem;
+  }
+  .branches-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   }
   .machines-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+}
+
+/* Mobile — 768px */
+@media (max-width: 768px) {
+  .branches-page {
+    padding: 0.75rem;
+  }
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .header-left h1 {
+    font-size: 1.35rem;
+  }
+  .subtitle {
+    font-size: 0.8rem;
+  }
+  .header-actions {
+    width: 100%;
   }
   .search-wrapper {
     width: 100%;
   }
+
+  /* Branches grid — single column */
+  .branches-grid {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+  .branch-card {
+    padding: 1rem;
+    gap: 0.85rem;
+  }
+  .branch-counts {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.4rem;
+  }
+  .count-box {
+    padding: 0.55rem 0.25rem;
+  }
+  .count-value {
+    font-size: 1rem;
+  }
+  .count-label {
+    font-size: 0.58rem;
+  }
+
+  /* Detail header */
+  .detail-header {
+    gap: 0.75rem;
+  }
+  .detail-title h2 {
+    font-size: 1.15rem;
+  }
+  .detail-subtitle {
+    font-size: 0.75rem;
+  }
+
+  /* Filters */
   .filters-bar {
     flex-direction: column;
+    gap: 0.75rem;
   }
   .filters-bar .search-wrapper {
     max-width: 100%;
+    width: 100%;
   }
+  .status-filters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+    width: 100%;
+  }
+  .filter-btn {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.78rem;
+  }
+
+  /* Machines grid — 2 cols */
+  .machines-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  .machine-info {
+    padding: 0.7rem;
+  }
+  .machine-info h4 {
+    font-size: 0.88rem;
+  }
+  .machine-code,
+  .machine-serial {
+    font-size: 0.68rem;
+  }
+
+  /* Modal as bottom sheet */
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .modal-content {
+    width: 100%;
+    max-width: 100%;
+    max-height: 92vh;
+    border-radius: 1.25rem 1.25rem 0 0;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
+  }
+  .modal-header {
+    border-radius: 1.25rem 1.25rem 0 0;
+    padding: 1rem 1.25rem;
+  }
+  .modal-header-icon {
+    width: 38px;
+    height: 38px;
+    font-size: 1rem;
+  }
+  .modal-header h3 {
+    font-size: 1rem;
+  }
+  .modal-body {
+    padding: 1.25rem;
+    gap: 1.25rem;
+  }
+
+  /* Modal view grids */
   .view-photo-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
   }
   .view-details-grid {
     grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  /* Pagination tighter */
+  .pagination {
+    gap: 0.6rem;
+  }
+  .pagination-btn {
+    width: 36px;
+    height: 36px;
+  }
+  .page-info {
+    font-size: 0.78rem;
   }
 }
+
+/* Small mobile — 480px */
 @media (max-width: 480px) {
+  .branches-page {
+    padding: 0.6rem;
+  }
+  .header-left h1 {
+    font-size: 1.2rem;
+  }
+  .subtitle {
+    font-size: 0.75rem;
+  }
+
+  /* Branch card */
+  .branch-card {
+    padding: 0.85rem;
+    gap: 0.7rem;
+    border-radius: 14px;
+  }
+  .branch-icon {
+    width: 38px;
+    height: 38px;
+    font-size: 0.95rem;
+    border-radius: 10px;
+  }
+  .branch-meta h3 {
+    font-size: 0.92rem;
+  }
+  .branch-code {
+    font-size: 0.65rem;
+  }
+  .branch-counts {
+    gap: 0.3rem;
+  }
+  .count-box {
+    padding: 0.45rem 0.15rem;
+    border-radius: 8px;
+  }
+  .count-value {
+    font-size: 0.9rem;
+  }
+  .count-label {
+    font-size: 0.52rem;
+    margin-top: 0.2rem;
+  }
+
+  /* Detail */
+  .btn-back {
+    padding: 0.45rem 0.85rem;
+    font-size: 0.8rem;
+  }
+  .detail-title h2 {
+    font-size: 1rem;
+  }
+  .detail-subtitle {
+    font-size: 0.7rem;
+  }
+
+  /* Filters stack */
+  .status-filters {
+    grid-template-columns: 1fr;
+  }
+  .filter-btn {
+    font-size: 0.75rem;
+    padding: 0.45rem 0.7rem;
+  }
+
+  /* Machines — single column */
   .machines-grid {
     grid-template-columns: 1fr;
+    gap: 0.7rem;
+  }
+
+  /* Modal */
+  .modal-header {
+    padding: 0.85rem 1rem;
+  }
+  .modal-header-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 0.9rem;
+    border-radius: 10px;
+  }
+  .modal-header h3 {
+    font-size: 0.95rem;
+  }
+  .modal-subtitle {
+    font-size: 0.68rem;
+  }
+  .close-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 1rem;
+  }
+  .modal-body {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  /* View sections tighter */
+  .form-section-title {
+    font-size: 0.72rem;
+  }
+  .view-photo-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.4rem;
+  }
+  .view-detail {
+    padding: 0.5rem 0.7rem;
+  }
+  .detail-label {
+    font-size: 0.62rem;
+  }
+  .detail-value {
+    font-size: 0.82rem;
+  }
+  .material-tag {
+    font-size: 0.72rem;
+    padding: 0.3rem 0.6rem;
+  }
+
+  /* Lightbox */
+  .lightbox-overlay {
+    padding: 0.75rem;
+  }
+  .lightbox-close {
+    width: 38px;
+    height: 38px;
+    font-size: 1rem;
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+}
+
+/* Touch-friendly tap targets on touch devices */
+@media (hover: none) and (pointer: coarse) {
+  .pagination-btn,
+  .close-btn,
+  .btn-back {
+    min-height: 40px;
+  }
+  .branch-card,
+  .machine-card {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Prevent iOS Safari zoom on input focus */
+@media (max-width: 767px) {
+  .search-input {
+    font-size: 16px;
   }
 }
 </style>
