@@ -14,7 +14,6 @@
     </div>
 
     <!-- Dashboard Content -->
-
     <div v-else class="dashboard-content">
       <!-- Admin view: 4 cards -->
       <template v-if="isAdmin">
@@ -31,9 +30,14 @@
             <div class="card-right">
               <div class="card-value">{{ formatNumber(dashboardData.total_machines ?? 0) }}</div>
               <div class="card-label">Jumla ya Mashine</div>
-              <div class="card-badge">
-                <i class="fas fa-check-circle"></i>
-                {{ formatNumber(dashboardData.active_machines ?? 0) }} hai
+              <div class="card-footer">
+                <div class="card-badge">
+                  <i class="fas fa-check-circle"></i>
+                  {{ formatNumber(dashboardData.active_machines ?? 0) }} hai
+                </div>
+                <router-link to="/machines" class="card-link">
+                  Angalia <i class="fas fa-arrow-right"></i>
+                </router-link>
               </div>
             </div>
           </div>
@@ -48,7 +52,12 @@
             <div class="card-right">
               <div class="card-value">{{ formatNumber(dashboardData.branch_count ?? 0) }}</div>
               <div class="card-label">Matawi Yote</div>
-              <div class="card-badge"><i class="fas fa-building"></i> Matawi ya Bonanza</div>
+              <div class="card-footer">
+                <div class="card-badge"><i class="fas fa-building"></i> Matawi ya Bonanza</div>
+                <router-link to="/branches" class="card-link">
+                  Angalia <i class="fas fa-arrow-right"></i>
+                </router-link>
+              </div>
             </div>
           </div>
 
@@ -78,8 +87,13 @@
             <div class="card-right">
               <div class="card-label">Mapato ya Leo</div>
               <div class="card-value">{{ formatCurrency(dashboardData.today_revenue ?? 0) }}</div>
-              <div class="card-badge positive">
-                <i class="fas fa-arrow-up"></i> {{ todayGrowth }}% kuliko jana
+              <div class="card-footer">
+                <div class="card-badge positive">
+                  <i class="fas fa-arrow-up"></i> {{ todayGrowth }}% kuliko jana
+                </div>
+                <router-link to="/collections" class="card-link">
+                  Angalia <i class="fas fa-arrow-right"></i>
+                </router-link>
               </div>
             </div>
           </div>
@@ -250,6 +264,38 @@ onMounted(() => {
   font-size: 0.7rem;
 }
 
+/* Card footer + "Angalia" link */
+.card-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.card-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #1e88e5;
+  text-decoration: none;
+  padding: 0.25rem 0.75rem;
+  border-radius: 2rem;
+  border: 1px solid rgba(30, 136, 229, 0.35);
+  background: #eef6fe;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+.card-link:hover {
+  background: #1e88e5;
+  color: #ffffff;
+  border-color: #1e88e5;
+  transform: translateX(2px);
+}
+.card-link i {
+  font-size: 0.65rem;
+}
+
 /* Manager welcome */
 .manager-welcome {
   display: flex;
@@ -398,6 +444,13 @@ onMounted(() => {
     font-size: 0.8rem;
   }
   .card-badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.65rem;
+  }
+  .card-footer {
+    gap: 0.4rem;
+  }
+  .card-link {
     font-size: 0.7rem;
     padding: 0.2rem 0.65rem;
   }

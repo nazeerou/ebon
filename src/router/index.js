@@ -12,8 +12,8 @@ import Dashboard from '@/views/Dashboard.vue'
 
 // Machine pages
 import MachineList from '@/views/machines/MachineList.vue'
-// import MachineForm from '@/views/machines/MachineForm.vue'
-// import MachineDetail from '@/views/machines/MachineDetail.vue'
+import TokenForm from '@/views/machines/TokenForm.vue'
+import TokenList from '@/views/machines/TokenList.vue'
 
 // // Branch pages
 import BranchList from '@/views/branches/BranchList.vue'
@@ -31,6 +31,7 @@ import OCRScanner from '@/views/readings/OCRScanner.vue'
 // // Collection pages
 import CollectionList from '@/views/collections/CollectionList.vue'
 import BranchesList from '@/views/machines/BranchesList.vue'
+import ExpenseList from '@/views/expenses/ExpenseList.vue'
 // import CollectionForm from '@/views/collections/CollectionForm.vue'
 
 // // Expense pages
@@ -114,33 +115,39 @@ const routes = [
           icon: 'microchip',
         },
       },
-      // {
-      //   path: 'machines/create',
-      //   name: 'MachineCreate',
-      //   component: MachineForm,
-      //   meta: {
-      //     title: 'Sajili Mashine',
-      //     icon: 'plus-circle',
-      //   },
-      // },
-      // {
-      //   path: 'machines/:id',
-      //   name: 'MachineDetail',
-      //   component: MachineDetail,
-      //   meta: {
-      //     title: 'Taarifa za Mashine',
-      //     icon: 'info-circle',
-      //   },
-      // },
-      // {
-      //   path: 'machines/:id/edit',
-      //   name: 'MachineEdit',
-      //   component: MachineForm,
-      //   meta: {
-      //     title: 'Hariri Mashine',
-      //     icon: 'edit',
-      //   },
-      // },
+      {
+        path: 'tokens',
+        name: 'Tokens',
+        component: TokenForm,
+        meta: {
+          title: 'Tokens',
+          icon: 'plus-circle',
+        },
+      },
+      {
+        path: 'tokens/lists',
+        name: 'TokenList',
+        component: TokenList,
+        meta: {
+          title: 'Taarifa za Tokens',
+          icon: 'info-circle',
+        },
+      },
+      {
+        path: 'expenses',
+        name: 'ExpenseList',
+        component: ExpenseList,
+        meta: {
+          title: 'Gharama na Matumizi',
+          icon: 'edit',
+        },
+      },
+      {
+        path: '/alerts',
+        name: 'OverdueAlerts',
+        component: () => import('@/views/alerts/OverdueAlerts.vue'),
+        meta: { requiresAuth: true },
+      },
       {
         path: 'branches',
         name: 'Branches',

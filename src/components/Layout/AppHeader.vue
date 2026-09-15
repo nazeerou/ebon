@@ -8,6 +8,7 @@
 
     <div class="navbar-right">
       <!-- Search Bar (desktop) -->
+
       <!-- <div class="search-bar" :class="{ expanded: searchExpanded }">
         <i class="fas fa-search search-icon"></i>
         <input
@@ -23,6 +24,8 @@
 
       <!-- Notifications -->
       <div class="notifications" ref="notificationRef">
+        <NotificationBell />
+
         <!-- <button class="notification-btn" @click="toggleNotifications">
           <i class="fas fa-bell"></i>
           <span v-if="unreadNotifications" class="notification-badge">{{
@@ -147,6 +150,7 @@ import { useAuthStore } from '@/stores/auth'
 import { formatDate } from '@/utils/formatters'
 import api from '@/services/api'
 import Swal from 'sweetalert2'
+import NotificationBell from '@/components/NotificationBell.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()

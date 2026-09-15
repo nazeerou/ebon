@@ -544,14 +544,14 @@ const getImageUrl = (path) => {
     return path
   }
   if (path.startsWith('/') || path.startsWith('/uploads/')) {
-    const baseUrl = import.meta.env.VITE_API_URL || 'https://api.ebon.bas.co.tz/api/v1'
-    // const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
+    // const baseUrl = import.meta.env.VITE_API_URL || 'https://api.ebon.bas.co.tz/api/v1'
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
 
     const baseDomain = baseUrl.replace('/api/v1', '')
     return `${baseDomain}${path}`
   }
-  // const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
-  const baseUrl = import.meta.env.VITE_API_URL || 'https://api.ebon.bas.co.tz/api/v1'
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
+  // const baseUrl = import.meta.env.VITE_API_URL || 'https://api.ebon.bas.co.tz/api/v1'
 
   const baseDomain = baseUrl.replace('/api/v1', '')
   return `${baseDomain}/${path}`
@@ -861,10 +861,10 @@ onUnmounted(() => {
   border-radius: 1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border: 1px solid #eef2f6;
-  overflow: hidden;
+  /* overflow: hidden; */
 }
 .table-responsive {
-  overflow-x: auto;
+  /* overflow-x: auto; */
 }
 .readings-table {
   width: 100%;

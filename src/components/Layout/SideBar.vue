@@ -111,6 +111,17 @@
             <span>Soma Meter (Mileage)</span>
           </router-link>
         </div>
+        <div class="submenu" v-show="openSections.ocr">
+          <router-link
+            to="/tokens"
+            class="submenu-item"
+            active-class="active"
+            @click="closeSidebarOnMobile"
+          >
+            <i class="fas fa-camera-retro"></i>
+            <span>Token(s)</span>
+          </router-link>
+        </div>
       </div>
 
       <!-- Readings & Collections – Admin only -->
@@ -141,6 +152,15 @@
             <i class="fas fa-hand-holding-usd"></i>
             <span>Collections</span>
           </router-link>
+          <router-link
+            to="/tokens/lists"
+            class="submenu-item"
+            active-class="active"
+            @click="closeSidebarOnMobile"
+          >
+            <i class="fas fa-hand-holding-usd"></i>
+            <span>Tokens Recorded</span>
+          </router-link>
         </div>
       </div>
 
@@ -161,9 +181,9 @@
             @click="closeSidebarOnMobile"
           >
             <i class="fas fa-receipt"></i>
-            <span>Gharama</span>
+            <span>Gharama na Matumizi</span>
           </router-link>
-          <router-link
+          <!-- <router-link
             to="/reports/revenue"
             class="submenu-item"
             active-class="active"
@@ -171,7 +191,7 @@
           >
             <i class="fas fa-chart-simple"></i>
             <span>Mapato Halisi</span>
-          </router-link>
+          </router-link> -->
         </div>
       </div>
 
