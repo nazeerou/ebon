@@ -27,10 +27,6 @@
           <i v-else class="fas fa-search"></i>
           Chuja
         </button>
-        <!-- <button class="btn-reset" @click="resetFilters" :disabled="tokenStore.loadingGroups">
-          <i class="fas fa-redo"></i>
-          Safisha
-        </button> -->
       </div>
 
       <!-- Loading -->
@@ -209,7 +205,6 @@ const loadData = async () => {
 
   try {
     await tokenStore.fetchTokensGroupedByBranch(params)
-    // open all branches by default
     openBranches.value = groups.value.map((g) => g.branch_id)
   } catch (err) {
     console.error('fetchTokensGroupedByBranch error:', err)
@@ -226,6 +221,9 @@ onMounted(loadData)
 </script>
 
 <style scoped>
+/* =========================================================
+   Base layout
+   ========================================================= */
 .token-list-page {
   padding: 1.5rem;
   max-width: 1200px;
@@ -240,7 +238,7 @@ onMounted(loadData)
   border: 1px solid rgba(0, 0, 0, 0.03);
 }
 
-/* Header */
+/* ---------- Header ---------- */
 .list-header {
   display: flex;
   align-items: center;
@@ -260,10 +258,14 @@ onMounted(loadData)
   box-shadow: 0 8px 14px rgba(30, 136, 229, 0.25);
   flex-shrink: 0;
 }
+.header-text {
+  min-width: 0;
+}
 .header-text h2 {
   margin: 0;
   font-size: 1.25rem;
   color: #1a2634;
+  line-height: 1.25;
 }
 .subtitle {
   margin: 0.15rem 0 0;
@@ -271,10 +273,10 @@ onMounted(loadData)
   color: #5e6f8d;
 }
 
-/* Filters */
+/* ---------- Filters ---------- */
 .filters {
   display: grid;
-  grid-template-columns: 1fr 1fr auto auto;
+  grid-template-columns: 1fr 1fr auto;
   gap: 0.75rem;
   align-items: end;
   padding: 1rem;
@@ -286,6 +288,7 @@ onMounted(loadData)
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  min-width: 0;
 }
 .filter-group label {
   font-size: 0.75rem;
@@ -295,6 +298,7 @@ onMounted(loadData)
   letter-spacing: 0.03em;
 }
 .form-control {
+  width: 100%;
   padding: 0.6rem 0.85rem;
   font-size: 0.9rem;
   border-radius: 0.6rem;
@@ -304,6 +308,7 @@ onMounted(loadData)
   outline: none;
   font-family: inherit;
   transition: all 0.2s ease;
+  box-sizing: border-box;
 }
 .form-control:focus {
   border-color: #1e88e5;
@@ -313,6 +318,7 @@ onMounted(loadData)
 .btn-reset {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.4rem;
   padding: 0.6rem 1.1rem;
   border-radius: 0.6rem;
@@ -345,10 +351,10 @@ onMounted(loadData)
   cursor: not-allowed;
 }
 
-/* Summary strip */
+/* ---------- Summary strip (fixed: auto-fit instead of hard 3 cols) ---------- */
 .summary-strip {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 0.75rem;
   padding: 1rem 1.25rem;
   background: linear-gradient(135deg, #eef6fe, #e3f2fd);
@@ -360,6 +366,7 @@ onMounted(loadData)
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+  min-width: 0;
 }
 .summary-label {
   font-size: 0.7rem;
@@ -373,12 +380,13 @@ onMounted(loadData)
   font-weight: 800;
   color: #1a2634;
   letter-spacing: -0.02em;
+  word-break: break-word;
 }
 .summary-value.amount {
   color: #0d47a1;
 }
 
-/* Groups */
+/* ---------- Groups ---------- */
 .groups {
   display: flex;
   flex-direction: column;
@@ -396,7 +404,7 @@ onMounted(loadData)
   box-shadow: 0 6px 16px rgba(30, 136, 229, 0.08);
 }
 
-/* Group header */
+/* ---------- Group header ---------- */
 .group-header {
   width: 100%;
   display: flex;
@@ -423,6 +431,7 @@ onMounted(loadData)
   align-items: center;
   gap: 0.75rem;
   min-width: 0;
+  flex: 1;
 }
 .group-icon {
   width: 40px;
@@ -438,11 +447,15 @@ onMounted(loadData)
 }
 .group-info {
   min-width: 0;
+  flex: 1;
 }
 .group-name {
   font-size: 1rem;
   font-weight: 700;
   color: #1a2634;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .group-meta {
   display: flex;
@@ -467,6 +480,7 @@ onMounted(loadData)
   font-weight: 800;
   color: #0d47a1;
   letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 .chevron {
   font-size: 0.8rem;
@@ -474,7 +488,7 @@ onMounted(loadData)
   transition: transform 0.2s ease;
 }
 
-/* Group body */
+/* ---------- Group body ---------- */
 .group-body {
   padding: 0.75rem 1.25rem 1.25rem;
   animation: slideDown 0.2s ease;
@@ -490,9 +504,10 @@ onMounted(loadData)
   }
 }
 
-/* Table */
+/* ---------- Table ---------- */
 .table-wrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border-radius: 0.6rem;
   border: 1px solid #e2e8f0;
 }
@@ -545,23 +560,14 @@ onMounted(loadData)
   padding: 0.15rem 0.5rem;
   border-radius: 0.35rem;
   color: #2c3e66;
-}
-.machine-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.78rem;
-  color: #1a2634;
-}
-.machine-tag i {
-  color: #1e88e5;
-  font-size: 0.75rem;
+  display: inline-block;
+  word-break: break-all;
 }
 .muted {
   color: #b0b8c7;
 }
 
-/* Inline states */
+/* ---------- Inline states ---------- */
 .loading-inline,
 .empty-inline,
 .error-inline {
@@ -574,6 +580,7 @@ onMounted(loadData)
   font-size: 0.95rem;
   background: #f8fafc;
   color: #5e6f8d;
+  text-align: center;
 }
 .empty-inline i {
   font-size: 1.4rem;
@@ -593,6 +600,7 @@ onMounted(loadData)
   border-top-color: #1e88e5;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
 }
 @keyframes spin {
   to {
@@ -600,32 +608,369 @@ onMounted(loadData)
   }
 }
 
-/* Responsive */
-@media (max-width: 768px) {
+/* =========================================================
+   RESPONSIVE — Tablet (≤ 992px)
+   ========================================================= */
+@media (max-width: 992px) {
+  .token-list-page {
+    padding: 1rem;
+  }
   .list-card {
-    padding: 1.25rem;
+    padding: 1.5rem;
     border-radius: 1rem;
   }
   .filters {
     grid-template-columns: 1fr 1fr;
   }
+  .filters .btn-filter,
+  .filters .btn-reset {
+    grid-column: span 2;
+  }
+}
+
+/* =========================================================
+   RESPONSIVE — Mobile (≤ 768px)
+   ========================================================= */
+@media (max-width: 768px) {
+  .token-list-page {
+    padding: 0.75rem;
+  }
+  .list-card {
+    padding: 1.15rem;
+    border-radius: 0.85rem;
+  }
+
+  /* Header */
+  .list-header {
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .header-icon {
+    width: 46px;
+    height: 46px;
+    font-size: 1.2rem;
+    border-radius: 0.75rem;
+  }
+  .header-text h2 {
+    font-size: 1.05rem;
+  }
+  .subtitle {
+    font-size: 0.78rem;
+  }
+
+  /* Filters */
+  .filters {
+    padding: 0.85rem;
+    gap: 0.6rem;
+    border-radius: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .filter-group label {
+    font-size: 0.7rem;
+  }
+  .form-control {
+    font-size: 16px; /* prevents iOS zoom on focus */
+    padding: 0.55rem 0.7rem;
+  }
   .btn-filter,
   .btn-reset {
-    grid-column: span 1;
+    padding: 0.65rem 1rem;
+    font-size: 0.85rem;
+    min-height: 42px;
   }
+
+  /* Summary */
   .summary-strip {
-    grid-template-columns: 1fr;
-  }
-  .group-header {
     padding: 0.85rem 1rem;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .summary-value {
+    font-size: 1rem;
+  }
+  .summary-label {
+    font-size: 0.65rem;
+  }
+
+  /* Group header */
+  .group-header {
+    padding: 0.85rem 0.9rem;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+  .group-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 0.9rem;
+    border-radius: 0.6rem;
   }
   .group-name {
     font-size: 0.95rem;
   }
+  .group-meta {
+    font-size: 0.7rem;
+    gap: 0.6rem;
+  }
+  .group-total {
+    font-size: 0.95rem;
+  }
+  .group-right {
+    gap: 0.5rem;
+  }
+
+  /* Group body */
+  .group-body {
+    padding: 0.5rem 0.75rem 1rem;
+  }
+
+  /* ---------- TABLE → STACKED CARDS ---------- */
+  .table-wrap {
+    border: none;
+    border-radius: 0;
+    overflow: visible;
+  }
+  .tokens-table,
+  .tokens-table thead,
+  .tokens-table tbody,
+  .tokens-table tfoot,
+  .tokens-table tr,
   .tokens-table th,
   .tokens-table td {
-    padding: 0.5rem 0.7rem;
+    display: block;
+    width: 100%;
+  }
+  .tokens-table thead {
+    display: none;
+  }
+  .tokens-table tbody tr {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.6rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
+    white-space: normal;
+  }
+  .tokens-table tbody tr:hover {
+    background: #f8fafc;
+  }
+  .tokens-table tbody tr:last-child {
+    margin-bottom: 0;
+  }
+  .tokens-table tbody td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px dashed #eef2f7;
+    white-space: normal;
+    text-align: right;
+  }
+  .tokens-table tbody td:last-child {
+    border-bottom: none;
+    padding-bottom: 0.25rem;
+  }
+  .tokens-table tbody td:first-child {
+    padding-top: 0.25rem;
+  }
+  /* Auto-generated labels since tds have no data-label */
+  .tokens-table tbody td:nth-child(1)::before {
+    content: 'Reference';
+    flex-shrink: 0;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #5e6f8d;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    text-align: left;
+  }
+  .tokens-table tbody td:nth-child(2)::before {
+    content: 'Tarehe';
+    flex-shrink: 0;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #5e6f8d;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    text-align: left;
+  }
+  .tokens-table tbody td:nth-child(3)::before {
+    content: 'Aliyerekodi';
+    flex-shrink: 0;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #5e6f8d;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    text-align: left;
+  }
+  .tokens-table tbody td:nth-child(4)::before {
+    content: 'Kiasi';
+    flex-shrink: 0;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #5e6f8d;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    text-align: left;
+  }
+
+  /* Footer → single card */
+  .tokens-table tfoot {
+    display: block;
+    margin-top: 0.5rem;
+  }
+  .tokens-table tfoot tr {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    background: #eef6fe;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid #d6e8f7;
+    border-radius: 0.6rem;
+  }
+  .tokens-table tfoot td {
+    display: inline;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font-size: 0.9rem;
+    text-align: right;
+  }
+  .tokens-table tfoot td:first-child {
+    color: #5e6f8d;
+    font-weight: 600;
+    text-align: left;
+  }
+}
+
+/* =========================================================
+   RESPONSIVE — Small mobile (≤ 480px)
+   ========================================================= */
+@media (max-width: 480px) {
+  .token-list-page {
+    padding: 0.5rem;
+  }
+  .list-card {
+    padding: 0.9rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+  }
+
+  .list-header {
+    gap: 0.6rem;
+    margin-bottom: 0.85rem;
+  }
+  .header-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+    border-radius: 0.6rem;
+  }
+  .header-text h2 {
+    font-size: 0.95rem;
+  }
+  .subtitle {
+    font-size: 0.72rem;
+  }
+
+  /* Filters → single column */
+  .filters {
+    grid-template-columns: 1fr;
+    padding: 0.75rem;
+    gap: 0.55rem;
+  }
+  .filters .btn-filter,
+  .filters .btn-reset {
+    grid-column: span 1;
+    width: 100%;
+  }
+
+  /* Summary: stack with divider */
+  .summary-strip {
+    padding: 0.75rem 0.85rem;
+    gap: 0.4rem;
+  }
+  .summary-item + .summary-item {
+    padding-top: 0.5rem;
+    border-top: 1px dashed #cfe3f8;
+  }
+  .summary-value {
+    font-size: 0.95rem;
+  }
+
+  /* Group header tighter */
+  .group-header {
+    padding: 0.7rem 0.75rem;
+    gap: 0.5rem;
+  }
+  .group-left {
+    gap: 0.55rem;
+  }
+  .group-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 0.8rem;
+  }
+  .group-name {
+    font-size: 0.88rem;
+  }
+  .group-meta {
+    font-size: 0.66rem;
+    gap: 0.5rem;
+  }
+  .group-total {
+    font-size: 0.85rem;
+  }
+  .group-right {
+    gap: 0.4rem;
+  }
+  .chevron {
+    font-size: 0.7rem;
+  }
+
+  .group-body {
+    padding: 0.4rem 0.6rem 0.75rem;
+  }
+
+  /* Stacked cards tighter */
+  .tokens-table tbody tr {
+    padding: 0.4rem 0.6rem;
+  }
+  .tokens-table tbody td {
     font-size: 0.78rem;
+    padding: 0.35rem 0;
+  }
+  .tokens-table tbody td::before {
+    font-size: 0.65rem;
+  }
+  .ref {
+    font-size: 0.72rem;
+    padding: 0.1rem 0.4rem;
+  }
+
+  .tokens-table tfoot tr {
+    padding: 0.6rem 0.75rem;
+  }
+  .tokens-table tfoot td {
+    font-size: 0.82rem;
+  }
+}
+
+/* =========================================================
+   Touch devices — bigger tap targets
+   ========================================================= */
+@media (hover: none) and (pointer: coarse) {
+  .group-header {
+    min-height: 56px;
+  }
+  .btn-filter,
+  .btn-reset {
+    min-height: 44px;
+  }
+  .form-control {
+    min-height: 44px;
   }
 }
 </style>
