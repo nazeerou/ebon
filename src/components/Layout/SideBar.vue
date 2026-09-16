@@ -79,15 +79,6 @@
             <i class="fas fa-list"></i>
             <span>Matawi Yote</span>
           </router-link>
-          <!-- <router-link
-            to="/branches/create"
-            class="submenu-item"
-            active-class="active"
-            @click="closeSidebarOnMobile"
-          >
-            <i class="fas fa-plus-circle"></i>
-            <span>Ongeza Tawi</span>
-          </router-link> -->
         </div>
       </div>
 
@@ -110,15 +101,13 @@
             <i class="fas fa-camera-retro"></i>
             <span>Soma Meter (Mileage)</span>
           </router-link>
-        </div>
-        <div class="submenu" v-show="openSections.ocr">
           <router-link
             to="/tokens"
             class="submenu-item"
             active-class="active"
             @click="closeSidebarOnMobile"
           >
-            <i class="fas fa-camera-retro"></i>
+            <i class="fas fa-coins"></i>
             <span>Token(s)</span>
           </router-link>
         </div>
@@ -158,7 +147,7 @@
             active-class="active"
             @click="closeSidebarOnMobile"
           >
-            <i class="fas fa-hand-holding-usd"></i>
+            <i class="fas fa-receipt"></i>
             <span>Tokens Recorded</span>
           </router-link>
         </div>
@@ -183,116 +172,9 @@
             <i class="fas fa-receipt"></i>
             <span>Gharama na Matumizi</span>
           </router-link>
-          <!-- <router-link
-            to="/reports/revenue"
-            class="submenu-item"
-            active-class="active"
-            @click="closeSidebarOnMobile"
-          >
-            <i class="fas fa-chart-simple"></i>
-            <span>Mapato Halisi</span>
-          </router-link> -->
         </div>
       </div>
     </nav>
-    <!-- Reports Section – Admin only -->
-    <!-- <div class="nav-section" v-if="isAdmin">
-        <div class="section-header" @click="toggleSection('reports')">
-          <div class="section-title">
-            <i class="fas fa-file-alt"></i>
-            <span>Ripoti</span>
-          </div>
-          <i class="fas fa-chevron-down" :class="{ rotated: openSections.reports }"></i>
-        </div>
-        <div class="submenu" v-show="openSections.reports">
-          <router-link
-            to="/reports/daily"
-            class="submenu-item"
-            active-class="active"
-            @click="closeSidebarOnMobile"
-          >
-            <i class="fas fa-calendar-day"></i>
-            <span>Ripoti ya Siku</span>
-          </router-link>
-          <router-link
-            to="/reports/monthly"
-            class="submenu-item"
-            active-class="active"
-            @click="closeSidebarOnMobile"
-          >
-            <i class="fas fa-calendar-alt"></i>
-            <span>Ripoti ya Mwezi</span>
-          </router-link>
-          <router-link
-            to="/reports/machines"
-            class="submenu-item"
-            active-class="active"
-            @click="closeSidebarOnMobile"
-          >
-            <i class="fas fa-tachometer-alt"></i>
-            <span>Utendaji wa Mashine</span>
-          </router-link>
-          <router-link
-            to="/reports/branches"
-            class="submenu-item"
-            active-class="active"
-            @click="closeSidebarOnMobile"
-          >
-            <i class="fas fa-store"></i>
-            <span>Utendaji wa Matawi</span>
-          </router-link>
-        </div>
-      </div>
-
-      <!- Administration – Admin only -->
-    <!-- <div class="nav-section" v-if="isAdmin">
-        <div class="section-header" @click="toggleSection('admin')">
-          <div class="section-title">
-            <i class="fas fa-user-shield"></i>
-            <span>Usimamizi</span>
-          </div>
-          <i class="fas fa-chevron-down" :class="{ rotated: openSections.admin }"></i>
-        </div>
-        <div class="submenu" v-show="openSections.admin">
-          <router-link
-            to="/branches"
-            class="submenu-item"
-            active-class="active"
-            @click="closeSidebarOnMobile"
-          >
-            <i class="fas fa-building"></i>
-            <span>Matawi</span>
-          </router-link>
-          <router-link
-            to="/operators"
-            class="submenu-item"
-            active-class="active"
-            @click="closeSidebarOnMobile"
-          >
-            <i class="fas fa-users"></i>
-            <span>Watumiaji</span>
-          </router-link>
-          <router-link
-            to="/audit-trail"
-            class="submenu-item"
-            active-class="active"
-            @click="closeSidebarOnMobile"
-          >
-            <i class="fas fa-history"></i>
-            <span>Audit Trail</span>
-          </router-link>
-          <router-link
-            to="/settings"
-            class="submenu-item"
-            active-class="active"
-            @click="closeSidebarOnMobile"
-          >
-            <i class="fas fa-cog"></i>
-            <span>Mipangilio</span>
-          </router-link>
-        </div>
-      </div>
-    </nav> -->
 
     <!-- Sidebar Footer (User info & logout) -->
     <div class="sidebar-footer" v-if="!isMobile || (isMobile && isOpen)">
@@ -321,14 +203,45 @@
     </div>
   </aside>
 
-  <!-- Hamburger Menu Button (Mobile) -->
-  <!-- <button v-if="isMobile" class="hamburger-btn" @click="toggleSidebar">
-    <i class="fas" :class="isOpen ? 'fa-times' : 'fa-bars'"></i>
-  </button> -->
+  <!-- Hamburger Menu Button (Mobile) — hidden when sidebar is open -->
+  <button v-if="isMobile && !isOpen" class="hamburger-btn" @click="toggleSidebar">
+    <i class="fas fa-bars"></i>
+  </button>
 
-  <!-- Logout Confirmation Modal (same as before) -->
+  <!-- Logout Confirmation Modal -->
   <div v-if="showLogoutModal" class="modal-overlay" @click="closeLogoutModal">
-    <!-- ... unchanged ... -->
+    <div class="modal-content logout-modal" @click.stop>
+      <div class="modal-header">
+        <div class="modal-icon warning">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h3>Toka kwenye Mfumo</h3>
+        <button class="close-btn" @click="closeLogoutModal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="logout-icon">
+          <i class="fas fa-sign-out-alt"></i>
+        </div>
+        <p class="confirmation-text">Una uhakika unataka kutoka?</p>
+        <p class="warning-text-small">
+          <i class="fas fa-info-circle"></i>
+          Utahitaji kuingia tena ili kuendelea.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button @click="closeLogoutModal" class="btn-secondary" :disabled="logoutLoading">
+          <i class="fas fa-times"></i>
+          Ghairi
+        </button>
+        <button @click="confirmLogout" class="btn-danger" :disabled="logoutLoading">
+          <span v-if="logoutLoading" class="spinner-small"></span>
+          <i v-else class="fas fa-sign-out-alt"></i>
+          {{ logoutLoading ? 'Inatoka...' : 'Toka' }}
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -391,7 +304,7 @@ const userRole = computed(() => {
   return 'Mtumiaji'
 })
 
-// === NEW: Role checks ===
+// Role checks
 const isAdmin = computed(() => authStore.user?.role === 'admin')
 const isManager = computed(() => authStore.user?.role === 'manager')
 
@@ -401,7 +314,7 @@ const userAvatar = computed(() => {
   return `https://ui-avatars.com/api/?name=${initials}&background=1e3a8a&color=fff&size=100&bold=true`
 })
 
-// Methods (unchanged)
+// Methods
 const toggleSection = (section) => {
   openSections.value[section] = !openSections.value[section]
 }
@@ -492,7 +405,9 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* Sidebar Styles */
+/* ============================
+   Sidebar base
+   ============================ */
 .sidebar {
   width: 280px;
   background: linear-gradient(180deg, #1a2639 0%, #2c3e50 100%);
@@ -512,66 +427,56 @@ onUnmounted(() => {
   overflow-x: hidden;
 }
 
-/* Scrollbar Styling */
 .sidebar::-webkit-scrollbar {
   width: 5px;
 }
-
 .sidebar::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.1);
 }
-
 .sidebar::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.3);
   border-radius: 5px;
 }
-
 .sidebar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.5);
 }
 
-/* Desktop Styles */
 .sidebar.sidebar-desktop {
   transform: translateX(0);
 }
 
-/* Mobile Styles - Sidebar hidden by default */
+/* ============================
+   Mobile sidebar
+   ============================ */
 @media (max-width: 1024px) {
   .sidebar {
     transform: translateX(-100%);
     box-shadow: none;
     width: 280px;
   }
-
   .sidebar.sidebar-open {
     transform: translateX(0);
     box-shadow: 2px 0 20px rgba(0, 0, 0, 0.3);
   }
-
   .sidebar.sidebar-closed {
     transform: translateX(-100%);
     display: none;
   }
 
-  /* Main content adjustment for mobile */
   .main-content {
     margin-left: 0 !important;
     width: 100%;
   }
 }
 
-/* Sidebar Overlay (Mobile) */
+/* Overlay */
 .sidebar-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(0, 0, 0, 0.5);
   z-index: 999;
   animation: fadeIn 0.3s ease;
 }
-
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -581,7 +486,9 @@ onUnmounted(() => {
   }
 }
 
-/* Sidebar Header */
+/* ============================
+   Sidebar header
+   ============================ */
 .sidebar-header {
   padding: 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -616,63 +523,25 @@ onUnmounted(() => {
   cursor: pointer;
   padding: 5px;
   border-radius: 5px;
+  transition: background 0.2s;
 }
-
 .close-sidebar:hover {
   background: rgba(255, 255, 255, 0.1);
 }
-
 @media (max-width: 1024px) {
   .close-sidebar {
     display: block;
   }
 }
 
-/* Mobile User Info */
-.mobile-user-info {
-  display: none;
-  padding: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  align-items: center;
-  gap: 15px;
-}
-
-@media (max-width: 1024px) {
-  .mobile-user-info {
-    display: flex;
-  }
-}
-
-.mobile-user-info .user-avatar {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #3498db;
-}
-
-.mobile-user-info .user-details {
-  display: flex;
-  flex-direction: column;
-}
-
-.mobile-user-info .user-name {
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.mobile-user-info .user-role {
-  font-size: 0.8rem;
-  color: #8a9bb5;
-}
-
-/* Navigation Menu */
+/* ============================
+   Nav menu
+   ============================ */
 .nav-menu {
   flex: 1;
   padding: 20px 0;
 }
 
-/* Section Styles */
 .nav-section {
   margin-bottom: 5px;
 }
@@ -686,7 +555,6 @@ onUnmounted(() => {
   transition: background 0.3s;
   color: #b7c0cd;
 }
-
 .section-header:hover {
   background: rgba(255, 255, 255, 0.05);
 }
@@ -700,7 +568,6 @@ onUnmounted(() => {
   letter-spacing: 0.5px;
   color: #8a9bb5;
 }
-
 .section-title i {
   width: 20px;
   font-size: 1rem;
@@ -712,17 +579,15 @@ onUnmounted(() => {
   transition: transform 0.3s;
   color: #8a9bb5;
 }
-
 .section-header i.fa-chevron-down.rotated {
   transform: rotate(180deg);
 }
 
-/* Submenu Styles */
+/* Submenu */
 .submenu {
   background: rgba(0, 0, 0, 0.2);
   animation: slideDown 0.3s ease;
 }
-
 @keyframes slideDown {
   from {
     opacity: 0;
@@ -744,37 +609,30 @@ onUnmounted(() => {
   font-size: 0.9rem;
   position: relative;
 }
-
 .submenu-item i {
   width: 20px;
   font-size: 0.9rem;
   margin-right: 10px;
   color: #8a9bb5;
 }
-
 .submenu-item span {
   flex: 1;
 }
-
 .submenu-item:hover {
   background: rgba(255, 255, 255, 0.1);
   color: white;
   padding-left: 55px;
 }
-
 .submenu-item:hover i {
   color: white;
 }
-
 .submenu-item.active {
   background: #3498db;
   color: white;
 }
-
 .submenu-item.active i {
   color: white;
 }
-
 .submenu-item.active::before {
   content: '';
   position: absolute;
@@ -785,7 +643,7 @@ onUnmounted(() => {
   background: white;
 }
 
-/* Regular Nav Items (non-section) */
+/* Regular nav items */
 .nav-item {
   display: flex;
   align-items: center;
@@ -795,33 +653,27 @@ onUnmounted(() => {
   transition: all 0.3s;
   margin-bottom: 5px;
 }
-
 .nav-item i {
   width: 24px;
   font-size: 1.1rem;
   margin-right: 10px;
   color: #8a9bb5;
 }
-
 .nav-item span {
   flex: 1;
 }
-
 .nav-item:hover {
   background: rgba(255, 255, 255, 0.1);
   color: white;
   padding-left: 25px;
 }
-
 .nav-item:hover i {
   color: white;
 }
-
 .nav-item.active {
   color: white;
   box-shadow: 0 1px 1px rgba(52, 152, 219, 0.3);
 }
-
 .nav-item.active i {
   color: white;
 }
@@ -835,7 +687,9 @@ onUnmounted(() => {
   margin-left: 5px;
 }
 
-/* Sidebar Footer */
+/* ============================
+   Sidebar footer
+   ============================ */
 .sidebar-footer {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   padding: 15px 20px;
@@ -852,7 +706,6 @@ onUnmounted(() => {
   border-radius: 5px;
   transition: background 0.3s;
 }
-
 .user-info:hover {
   background: rgba(255, 255, 255, 0.1);
 }
@@ -887,7 +740,7 @@ onUnmounted(() => {
   font-size: 0.8rem;
 }
 
-/* User Menu Dropdown */
+/* User menu dropdown */
 .user-menu-dropdown {
   position: absolute;
   bottom: 100%;
@@ -901,7 +754,6 @@ onUnmounted(() => {
   z-index: 1001;
   animation: slideUp 0.3s ease;
 }
-
 @keyframes slideUp {
   from {
     opacity: 0;
@@ -928,15 +780,12 @@ onUnmounted(() => {
   font-size: 0.9rem;
   text-align: left;
 }
-
 .dropdown-item:hover {
   background: #f5f5f5;
 }
-
 .dropdown-item.text-danger {
   color: #e74c3c;
 }
-
 .dropdown-item i {
   width: 20px;
   font-size: 1rem;
@@ -949,7 +798,9 @@ onUnmounted(() => {
   margin: 5px 0;
 }
 
-/* Hamburger Button */
+/* ============================
+   Hamburger button
+   ============================ */
 .hamburger-btn {
   position: fixed;
   top: 25px;
@@ -969,27 +820,35 @@ onUnmounted(() => {
   box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
   transition: all 0.3s;
   border: 2px solid white;
+  animation: fadeInBtn 0.25s ease;
 }
-
+@keyframes fadeInBtn {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
 .hamburger-btn:hover {
   background: #2980b9;
   transform: scale(1.05);
 }
 
-/* Hide hamburger on desktop */
 @media (min-width: 1025px) {
   .hamburger-btn {
     display: none !important;
   }
 }
 
-/* Logout Modal Styles */
+/* ============================
+   Logout modal
+   ============================ */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
@@ -1018,7 +877,6 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
 }
-
 .modal-header h3 {
   margin: 0;
   color: #333;
@@ -1034,7 +892,6 @@ onUnmounted(() => {
   justify-content: center;
   font-size: 1.2rem;
 }
-
 .modal-icon.warning {
   background: #fee;
   color: #e74c3c;
@@ -1048,7 +905,6 @@ onUnmounted(() => {
   cursor: pointer;
   padding: 5px;
 }
-
 .close-btn:hover {
   color: #e74c3c;
 }
@@ -1060,7 +916,6 @@ onUnmounted(() => {
 .logout-icon {
   margin-bottom: 20px;
 }
-
 .logout-icon i {
   font-size: 60px;
   color: #f39c12;
@@ -1105,7 +960,6 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
 }
-
 .btn-secondary:hover {
   background: #eef2f6;
 }
@@ -1123,12 +977,10 @@ onUnmounted(() => {
   gap: 8px;
   transition: all 0.3s;
 }
-
 .btn-danger:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
 }
-
 .btn-danger:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -1143,14 +995,15 @@ onUnmounted(() => {
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }
-
 @keyframes spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-/* Small mobile devices */
+/* ============================
+   Responsive fine-tuning
+   ============================ */
 @media (max-width: 360px) {
   .hamburger-btn {
     top: 20px;
@@ -1159,17 +1012,14 @@ onUnmounted(() => {
     height: 38px;
     font-size: 1rem;
   }
-
   .sidebar {
-    width: 50%;
+    width: 260px;
   }
-
   .modal-content {
     width: 95%;
   }
 }
 
-/* Medium mobile devices */
 @media (min-width: 361px) and (max-width: 480px) {
   .hamburger-btn {
     top: 22px;
@@ -1177,34 +1027,31 @@ onUnmounted(() => {
     width: 40px;
     height: 40px;
   }
-
   .sidebar {
     width: 280px;
   }
 }
 
-/* Tablets */
 @media (min-width: 481px) and (max-width: 768px) {
   .hamburger-btn {
     top: 15px;
     left: 15px;
   }
-
   .sidebar {
     width: 280px;
   }
 }
 
-/* Active section highlight */
+/* ============================
+   Active section highlight
+   ============================ */
 .nav-section:has(.submenu-item.active) > .section-header {
   color: white;
   background: rgba(52, 152, 219, 0.2);
 }
-
 .nav-section:has(.submenu-item.active) > .section-header .section-title {
   color: #3498db;
 }
-
 .nav-section:has(.submenu-item.active) > .section-header i {
   color: #3498db;
 }
