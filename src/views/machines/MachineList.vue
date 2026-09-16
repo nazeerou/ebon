@@ -706,7 +706,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useMachineStore } from '@/stores/machine'
+import { useMachineStore } from '@/stores/Machine'
 import { formatDate, formatNumber } from '@/utils/formatters'
 import debounce from 'lodash/debounce'
 import axios from 'axios'
