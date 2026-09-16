@@ -326,7 +326,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useReadingStore } from '@/stores/reading'
-import { useMachineStore } from '@/stores/Machine'
+import { useMachineStore } from '@/stores/machine'
 import { formatNumber, formatCurrency, formatDate } from '@/utils/formatters'
 import debounce from 'lodash/debounce'
 
