@@ -11,7 +11,7 @@
       <button
         class="quick-action-btn"
         :class="{ disabled: !isAdmin }"
-        @click="isAdmin && quickAction('machines')"
+        @click="quickAction('machines')"
       >
         <i class="fas fa-microchip"></i>
         <span>Mashine</span>
@@ -19,7 +19,7 @@
       <button
         class="quick-action-btn"
         :class="{ disabled: !isAdmin }"
-        @click="isAdmin && quickAction('readings')"
+        @click="quickAction('readings')"
       >
         <i class="fas fa-camera-retro"></i>
         <span>Usomaji</span>
@@ -27,7 +27,7 @@
       <button
         class="quick-action-btn"
         :class="{ disabled: !isAdmin }"
-        @click="isAdmin && quickAction('collections')"
+        @click="quickAction('collections')"
       >
         <i class="fas fa-hand-holding-usd"></i>
         <span>Makusanyo</span>
@@ -35,10 +35,10 @@
       <button
         class="quick-action-btn"
         :class="{ disabled: !isAdmin }"
-        @click="isAdmin && quickAction('tokens')"
+        @click="quickAction('tokens')"
       >
         <i class="fas fa-chart-bar"></i>
-        <span>Tokens / Mtaji </span>
+        <span>Tokens / Mtaji</span>
       </button>
     </div>
 
@@ -113,17 +113,37 @@ const totalMachines = computed(() => dashboardStore.dashboardData?.total_machine
 // Role check
 const isAdmin = computed(() => authStore.user?.role === 'admin')
 
-// Methods
+/**
+ * Route map for quick actions.
+ * KEY (button) → PATH (vue-router destination)
+ */
+const QUICK_ROUTES = {
+  machines: '/machines',
+  readings: '/readings',
+  collections: '/collections',
+  tokens: '/tokens/lists', // ← FIX: added mapping
+  reports: '/reports/daily',
+}
+
 const quickAction = (action) => {
   // Only admin can trigger navigation
   if (!isAdmin.value) return
-  const routes = {
-    machines: '/machines',
-    readings: '/readings',
-    collections: '/collections',
-    reports: '/reports/daily',
+
+  const path = QUICK_ROUTES[action]
+  if (!path) {
+    console.warn(`[Footer] No route mapped for quick action "${action}"`)
+    return
   }
-  router.push(routes[action])
+
+  // Avoid redundant navigation warning when already on the target route
+  if (router.currentRoute.value.path === path) return
+
+  router.push(path).catch((err) => {
+    // Silently ignore "redundant navigation" errors
+    if (err?.name !== 'NavigationDuplicated') {
+      console.error('[Footer] Navigation error:', err)
+    }
+  })
 }
 
 const showHelp = () => {
@@ -169,7 +189,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* All existing styles remain unchanged */
 .footer {
   background: white;
   border-top: 1px solid #eef2f6;
@@ -256,9 +275,10 @@ onUnmounted(() => {
   right: 0;
   background: white;
   border-top: 1px solid #eef2f6;
-  padding: 10px;
+  padding: 8px 6px calc(8px + env(safe-area-inset-bottom, 0px));
   justify-content: space-around;
   z-index: 1000;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.04);
 }
 
 .quick-action-btn {
@@ -267,30 +287,50 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  gap: 4px;
   color: #666;
   cursor: pointer;
-  padding: 5px 10px;
-  border-radius: 5px;
+  padding: 6px 8px;
+  border-radius: 8px;
   transition: all 0.2s;
+  flex: 1;
+  min-width: 0;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .quick-action-btn:hover:not(.disabled) {
   background: #f5f5f5;
+  color: #2196f3;
+}
+
+.quick-action-btn:active:not(.disabled) {
+  background: #e3f2fd;
+  transform: scale(0.96);
 }
 
 .quick-action-btn.disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
-  pointer-events: none; /* Prevents any click events */
+  pointer-events: none;
 }
 
 .quick-action-btn i {
-  font-size: 1.2rem;
+  font-size: 1.15rem;
+  line-height: 1;
 }
 
 .quick-action-btn span {
-  font-size: 0.7rem;
+  font-size: 0.66rem;
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  letter-spacing: 0.01em;
 }
 
 /* Modal Styles */
@@ -397,6 +437,14 @@ onUnmounted(() => {
   .footer-stats {
     flex-direction: column;
     gap: 5px;
+  }
+
+  .quick-action-btn i {
+    font-size: 1.05rem;
+  }
+
+  .quick-action-btn span {
+    font-size: 0.62rem;
   }
 }
 </style>
