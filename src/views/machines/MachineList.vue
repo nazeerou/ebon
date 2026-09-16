@@ -429,12 +429,6 @@
                       {{ branch.branch_name }}
                     </option>
                   </select>
-
-                  <!-- ===== DEBUG: form branch select ===== -->
-                  <small style="font-size: 10px; color: #7c2d12; font-family: monospace">
-                    branches.length={{ branches.length }} | selected={{ form.branch_id }}
-                  </small>
-                  <!-- ===== END DEBUG ===== -->
                 </div>
                 <div class="form-group">
                   <label>Tarehe ya Ufungaji <span class="required">*</span></label>
@@ -718,8 +712,8 @@ import debounce from 'lodash/debounce'
 import axios from 'axios'
 
 const machineStore = useMachineStore()
-// const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
-const API_URL = import.meta.env.VITE_API_URL || 'https://ebon.bas.co.tz/api/v1'
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
+// const API_URL = import.meta.env.VITE_API_URL || 'https://ebon.bas.co.tz/api/v1'
 
 // ---- State ----
 const machines = ref([])
@@ -869,20 +863,48 @@ const buildPhotoUrl = (pathOrUrl) => {
 
 const today = () => new Date().toISOString().slice(0, 10)
 
-// ---- Load branches ----
+// ---- Load branches (FIXED: attaches auth token) ----
 const loadBranches = async () => {
   try {
-    const response = await axios.get(`${API_URL}/branches`)
-    if (response.data && response.data.data) branches.value = response.data.data
-    else if (Array.isArray(response.data)) branches.value = response.data
+    const token =
+      localStorage.getItem('token') ||
+      localStorage.getItem('auth_token') ||
+      localStorage.getItem('access_token')
+
+    console.log('🌐 [branches] API_URL =', API_URL)
+    console.log('🔑 [branches] token present =', !!token)
+
+    const response = await axios.get(`${API_URL}/branches`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+
+    console.log('📦 [branches] status =', response.status)
+    console.log('📦 [branches] payload =', response.data)
+
+    const payload = response?.data
+
+    if (Array.isArray(payload?.data)) branches.value = payload.data
+    else if (Array.isArray(payload)) branches.value = payload
+    else if (Array.isArray(payload?.branches)) branches.value = payload.branches
     else branches.value = []
+
+    console.log('✅ [branches] loaded =', branches.value.length)
+    if (branches.value[0]) {
+      console.log('🔎 [branches] sample keys =', Object.keys(branches.value[0]))
+      console.log('🔎 [branches] first item =', branches.value[0])
+    }
   } catch (err) {
-    console.error('Error loading branches:', err)
+    console.error('❌ [branches] failed:', {
+      message: err.message,
+      status: err.response?.status,
+      url: err.config?.url,
+      data: err.response?.data,
+    })
     branches.value = []
   }
 }
 
-// ---- Load machines ----
+// ---- Load machines (FIXED: debug block moved outside the if/else) ----
 const loadMachines = async () => {
   loading.value = true
   error.value = null
@@ -903,25 +925,26 @@ const loadMachines = async () => {
       pagination.to = responseData.to || 0
     } else if (Array.isArray(responseData)) {
       machines.value = responseData
-      // ===== DEBUG: branch_name inspection =====
-      if (responseData.data && responseData.data.length) {
-        console.group('🔍 [DEBUG] Machines loaded — branch inspection')
-        responseData.data.forEach((m, i) => {
-          console.log(`#${i} id=${m.id}`, {
-            machine_name: m.machine_name,
-            branch_id: m.branch_id,
-            branch_object: m.branch,
-            branch_name_from_relation: m.branch?.branch_name,
-            branch_name_flat: m.branch_name, // in case API flattens it
-            branch_names: m.branch_names, // in case of plural
-            raw_keys: Object.keys(m),
-          })
-        })
-        console.groupEnd()
-      }
     } else {
       machines.value = []
     }
+
+    // ===== DEBUG: branch_name inspection (runs in every branch) =====
+    if (machines.value.length) {
+      console.group('🔍 [DEBUG] Machines loaded — branch inspection')
+      machines.value.forEach((m, i) => {
+        console.log(`#${i} id=${m.id}`, {
+          machine_name: m.machine_name,
+          branch_id: m.branch_id,
+          branch_object: m.branch,
+          branch_name_from_relation: m.branch?.branch_name,
+          branch_name_flat: m.branch_name,
+          raw_keys: Object.keys(m),
+        })
+      })
+      console.groupEnd()
+    }
+    // ===== END DEBUG =====
   } catch (err) {
     console.error(err)
     error.value = err.response?.data?.message || 'Imeshindwa kupakia mashine.'
