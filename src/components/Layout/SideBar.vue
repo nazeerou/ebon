@@ -196,7 +196,7 @@
       </div>
 
       <!-- Reports Section – Admin only -->
-      <div class="nav-section" v-if="isAdmin">
+      <!-- <div class="nav-section" v-if="isAdmin">
         <div class="section-header" @click="toggleSection('reports')">
           <div class="section-title">
             <i class="fas fa-file-alt"></i>
@@ -293,6 +293,7 @@
         </div>
       </div>
     </nav>
+    -->
 
     <!-- Sidebar Footer (User info & logout) -->
     <div class="sidebar-footer" v-if="!isMobile || (isMobile && isOpen)">
