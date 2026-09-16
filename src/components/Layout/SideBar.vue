@@ -322,9 +322,9 @@
   </aside>
 
   <!-- Hamburger Menu Button (Mobile) -->
-  <button v-if="isMobile" class="hamburger-btn" @click="toggleSidebar">
+  <!-- <button v-if="isMobile" class="hamburger-btn" @click="toggleSidebar">
     <i class="fas" :class="isOpen ? 'fa-times' : 'fa-bars'"></i>
-  </button>
+  </button> -->
 
   <!-- Logout Confirmation Modal (same as before) -->
   <div v-if="showLogoutModal" class="modal-overlay" @click="closeLogoutModal">
