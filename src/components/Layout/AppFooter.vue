@@ -35,10 +35,10 @@
       <button
         class="quick-action-btn"
         :class="{ disabled: !isAdmin }"
-        @click="isAdmin && quickAction('reports')"
+        @click="isAdmin && quickAction('tokens/lists')"
       >
         <i class="fas fa-chart-bar"></i>
-        <span>Ripoti</span>
+        <span>Token Recorded</span>
       </button>
     </div>
 
