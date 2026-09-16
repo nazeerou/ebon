@@ -244,8 +244,8 @@
         </div>
       </div>
 
-      <!-- Administration – Admin only -->
-      <div class="nav-section" v-if="isAdmin">
+      <!- Administration – Admin only -->
+      <!-- <div class="nav-section" v-if="isAdmin">
         <div class="section-header" @click="toggleSection('admin')">
           <div class="section-title">
             <i class="fas fa-user-shield"></i>
@@ -292,8 +292,8 @@
           </router-link>
         </div>
       </div>
-    </nav>
-    -->
+    </nav> -->
+    
 
     <!-- Sidebar Footer (User info & logout) -->
     <div class="sidebar-footer" v-if="!isMobile || (isMobile && isOpen)">
