@@ -194,9 +194,9 @@
           </router-link> -->
         </div>
       </div>
-
-      <!-- Reports Section – Admin only -->
-      <!-- <div class="nav-section" v-if="isAdmin">
+    </nav>
+    <!-- Reports Section – Admin only -->
+    <!-- <div class="nav-section" v-if="isAdmin">
         <div class="section-header" @click="toggleSection('reports')">
           <div class="section-title">
             <i class="fas fa-file-alt"></i>
@@ -245,7 +245,7 @@
       </div>
 
       <!- Administration – Admin only -->
-      <!-- <div class="nav-section" v-if="isAdmin">
+    <!-- <div class="nav-section" v-if="isAdmin">
         <div class="section-header" @click="toggleSection('admin')">
           <div class="section-title">
             <i class="fas fa-user-shield"></i>
@@ -293,7 +293,6 @@
         </div>
       </div>
     </nav> -->
-    
 
     <!-- Sidebar Footer (User info & logout) -->
     <div class="sidebar-footer" v-if="!isMobile || (isMobile && isOpen)">
