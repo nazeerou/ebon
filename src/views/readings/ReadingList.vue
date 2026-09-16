@@ -861,10 +861,10 @@ onUnmounted(() => {
   border-radius: 1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border: 1px solid #eef2f6;
-  /* overflow: hidden; */
+  overflow: hidden;
 }
 .table-responsive {
-  /* overflow-x: auto; */
+  overflow-x: auto;
 }
 .readings-table {
   width: 100%;
