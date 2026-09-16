@@ -81,7 +81,7 @@
                 <div class="group-info">
                   <div class="group-name">{{ group.branch_name }}</div>
                   <div class="group-meta">
-                    <span><i class="fas fa-receipt"></i> {{ group.token_count }} Idadi</span>
+                    <!-- <span><i class="fas fa-receipt"></i> {{ group.token_count }} Idadi</span> -->
                     <span v-if="group.location">
                       <i class="fas fa-map-marker-alt"></i> {{ group.location }}
                     </span>
