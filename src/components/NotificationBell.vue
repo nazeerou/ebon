@@ -13,8 +13,7 @@
       <div v-if="open" class="bell-dropdown">
         <header class="bell-header">
           <div>
-            <h4>Meter Readings Zilizochelewa</h4>
-            <p class="bell-sub">Tawi: {{ alertStore.branch }}</p>
+            <h4>Machine Readings Zilizochelewa</h4>
           </div>
           <button class="bell-refresh" @click="refresh" :disabled="alertStore.loading">
             <i class="fas" :class="alertStore.loading ? 'fa-spinner fa-spin' : 'fa-sync-alt'"></i>
@@ -25,11 +24,11 @@
         <div class="bell-summary">
           <span class="pill warning">
             <i class="fas fa-exclamation-triangle"></i>
-            {{ alertStore.warningCount }} × 3+ siku
+            {{ alertStore.warningCount }} siku
           </span>
           <span class="pill critical">
             <i class="fas fa-fire"></i>
-            {{ alertStore.criticalCount }} × 7+ siku
+            {{ alertStore.criticalCount }} siku
           </span>
         </div>
 
