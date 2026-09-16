@@ -544,14 +544,14 @@ const getImageUrl = (path) => {
     return path
   }
   if (path.startsWith('/') || path.startsWith('/uploads/')) {
-    // const baseUrl = import.meta.env.VITE_API_URL || 'https://api.ebon.bas.co.tz/api/v1'
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
+    const baseUrl = import.meta.env.VITE_API_URL || 'https://api.ebon.bas.co.tz/api/v1'
+    // const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
 
     const baseDomain = baseUrl.replace('/api/v1', '')
     return `${baseDomain}${path}`
   }
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
-  // const baseUrl = import.meta.env.VITE_API_URL || 'https://api.ebon.bas.co.tz/api/v1'
+  // const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
+  const baseUrl = import.meta.env.VITE_API_URL || 'https://api.ebon.bas.co.tz/api/v1'
 
   const baseDomain = baseUrl.replace('/api/v1', '')
   return `${baseDomain}/${path}`
