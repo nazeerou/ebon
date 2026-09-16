@@ -16,9 +16,10 @@ function buildFormData(data, method = null) {
     if (value === undefined || value === null) return
     if (Array.isArray(value)) {
       value.forEach((v, i) => {
-        // Support arrays like materials[] and photos[index]
-        if (value.length && typeof v === 'object' && v instanceof File) {
+        if (v instanceof File) {
           fd.append(`${key}[${i}]`, v)
+        } else if (typeof v === 'object' && v !== null) {
+          fd.append(`${key}[${i}]`, JSON.stringify(v))
         } else {
           fd.append(`${key}[]`, v)
         }
@@ -74,13 +75,15 @@ export const useMachineStore = defineStore('machine', {
     activeMachines: (state) => state.machines.filter((m) => m.status === 'active').length,
     maintenanceMachines: (state) => state.machines.filter((m) => m.status === 'maintenance').length,
     inactiveMachines: (state) => state.machines.filter((m) => m.status === 'inactive').length,
-    totalCollections: (state) => {
-      return state.machines.reduce((sum, m) => sum + (parseFloat(m.total_collections) || 0), 0)
-    },
+    totalCollections: (state) =>
+      state.machines.reduce((sum, m) => sum + (parseFloat(m.total_collections) || 0), 0),
   },
 
   actions: {
-    // Fetch machines with pagination, filters, sorting
+    /* ==================================================================
+     |  READ ACTIONS — these hit the API
+     * ================================================================== */
+
     async fetchMachines(params = {}) {
       this.loading = true
       this.error = null
@@ -90,7 +93,6 @@ export const useMachineStore = defineStore('machine', {
 
         if (response.data.success) {
           this.machines = response.data.data.data || response.data.data || []
-          return response.data
         }
         return response.data
       } catch (error) {
@@ -101,7 +103,6 @@ export const useMachineStore = defineStore('machine', {
       }
     },
 
-    // Fetch a single machine by ID
     async fetchMachine(id) {
       this.loading = true
       this.error = null
@@ -111,7 +112,6 @@ export const useMachineStore = defineStore('machine', {
 
         if (response.data.success) {
           this.currentMachine = response.data.data
-          return response.data
         }
         return response.data
       } catch (error) {
@@ -122,7 +122,6 @@ export const useMachineStore = defineStore('machine', {
       }
     },
 
-    // Fetch dashboard statistics (summarized numbers)
     async fetchStatistics() {
       try {
         const response = await axios.get(`${API_URL}/machines/statistics`)
@@ -140,7 +139,6 @@ export const useMachineStore = defineStore('machine', {
       }
     },
 
-    // Fetch machines that have no reading today (pending readings)
     async fetchPendingReadings() {
       try {
         const response = await axios.get(`${API_URL}/machines/pending-readings`)
@@ -156,7 +154,16 @@ export const useMachineStore = defineStore('machine', {
       }
     },
 
-    // Create a new machine (supports FormData when photos/files are included)
+    /* ==================================================================
+     |  WRITE ACTIONS — NO auto refetch. Local state is patched in place.
+     |  Caller receives the raw API response and shows the success toast.
+     * ================================================================== */
+
+    /**
+     * Create a new machine.
+     * Supports plain JSON or FormData (with files).
+     * On success, inserts the created machine into the local `machines` array.
+     */
     async createMachine(machineData) {
       try {
         const isFormData = machineData instanceof FormData
@@ -174,10 +181,16 @@ export const useMachineStore = defineStore('machine', {
 
         const response = await axios.post(`${API_URL}/machines`, payload, config)
 
-        if (response.data.success) {
-          await this.fetchMachines()
-          await this.fetchStatistics()
+        // Patch local list in place — no refetch
+        if (response.data?.success && response.data?.data) {
+          const created = response.data.data
+          if (created?.id) {
+            const idx = this.machines.findIndex((m) => m.id === created.id)
+            if (idx === -1) this.machines.unshift(created)
+            else this.machines.splice(idx, 1, created)
+          }
         }
+
         return response.data
       } catch (error) {
         this.error = error.response?.data?.message || 'Failed to create machine'
@@ -185,7 +198,11 @@ export const useMachineStore = defineStore('machine', {
       }
     },
 
-    // Update an existing machine (supports FormData when photos/files are included)
+    /**
+     * Update an existing machine.
+     * Multipart updates use POST + _method=PUT (Laravel method spoofing).
+     * On success, replaces the record in `machines` and, if applicable, `currentMachine`.
+     */
     async updateMachine(id, machineData) {
       try {
         const isFormData = machineData instanceof FormData
@@ -193,40 +210,33 @@ export const useMachineStore = defineStore('machine', {
 
         let payload = machineData
         let config = {}
+        let isMultipart = false
 
         if (hasFiles) {
-          // Laravel method spoofing for multipart PUT
           payload = buildFormData(machineData, 'PUT')
           config.headers = { 'Content-Type': 'multipart/form-data' }
-          const response = await axios.post(`${API_URL}/machines/${id}`, payload, config)
-
-          if (response.data.success) {
-            await this.fetchMachines()
-            if (this.currentMachine?.id === id) await this.fetchMachine(id)
-            await this.fetchStatistics()
-          }
-          return response.data
-        }
-
-        // Regular JSON update
-        if (isFormData) {
+          isMultipart = true
+        } else if (isFormData) {
           config.headers = { 'Content-Type': 'multipart/form-data' }
-          const response = await axios.post(`${API_URL}/machines/${id}`, payload, config)
-          if (response.data.success) {
-            await this.fetchMachines()
-            if (this.currentMachine?.id === id) await this.fetchMachine(id)
-            await this.fetchStatistics()
+          isMultipart = true
+        }
+
+        const response = isMultipart
+          ? await axios.post(`${API_URL}/machines/${id}`, payload, config)
+          : await axios.put(`${API_URL}/machines/${id}`, payload, config)
+
+        // Patch local state — no refetch
+        if (response.data?.success && response.data?.data) {
+          const updated = response.data.data
+          if (updated?.id) {
+            const idx = this.machines.findIndex((m) => m.id === updated.id)
+            if (idx !== -1) this.machines.splice(idx, 1, updated)
           }
-          return response.data
+          if (this.currentMachine?.id === id) {
+            this.currentMachine = updated
+          }
         }
 
-        const response = await axios.put(`${API_URL}/machines/${id}`, payload, config)
-
-        if (response.data.success) {
-          await this.fetchMachines()
-          if (this.currentMachine?.id === id) await this.fetchMachine(id)
-          await this.fetchStatistics()
-        }
         return response.data
       } catch (error) {
         this.error = error.response?.data?.message || 'Failed to update machine'
@@ -234,20 +244,27 @@ export const useMachineStore = defineStore('machine', {
       }
     },
 
-    // Update only machine status
+    /**
+     * Update only the status field.
+     * Returns the API response; caller shows the toast.
+     */
     async updateMachineStatus(id, status) {
       return this.updateMachine(id, { status })
     },
 
-    // Delete a machine
+    /**
+     * Delete a single machine.
+     * On success, removes it from the local `machines` array.
+     */
     async deleteMachine(id) {
       try {
         const response = await axios.delete(`${API_URL}/machines/${id}`)
 
-        if (response.data.success) {
-          await this.fetchMachines()
-          await this.fetchStatistics()
+        if (response.data?.success) {
+          this.machines = this.machines.filter((m) => m.id !== id)
+          if (this.currentMachine?.id === id) this.currentMachine = null
         }
+
         return response.data
       } catch (error) {
         this.error = error.response?.data?.message || 'Failed to delete machine'
@@ -255,15 +272,19 @@ export const useMachineStore = defineStore('machine', {
       }
     },
 
-    // Bulk delete machines
-    async bulkDeleteMachines(ids) {
+    /**
+     * Bulk delete machines.
+     * On success, removes them from the local `machines` array.
+     */
+    async bulkDeleteMachines(ids = []) {
       try {
         const response = await axios.post(`${API_URL}/machines/bulk-delete`, { ids })
 
-        if (response.data.success) {
-          await this.fetchMachines()
-          await this.fetchStatistics()
+        if (response.data?.success) {
+          const set = new Set(ids)
+          this.machines = this.machines.filter((m) => !set.has(m.id))
         }
+
         return response.data
       } catch (error) {
         this.error = error.response?.data?.message || 'Bulk delete failed'
@@ -271,7 +292,10 @@ export const useMachineStore = defineStore('machine', {
       }
     },
 
-    // Export machines to CSV/Excel
+    /**
+     * Export machines to CSV/Excel — triggers a browser download.
+     * Does not touch store state.
+     */
     async exportMachines(filters = {}) {
       try {
         const response = await axios.get(`${API_URL}/machines/export`, {
@@ -282,12 +306,14 @@ export const useMachineStore = defineStore('machine', {
         const url = window.URL.createObjectURL(new Blob([response.data]))
         const link = document.createElement('a')
         link.href = url
+
         const contentDisposition = response.headers['content-disposition']
         let filename = 'machines_export.csv'
         if (contentDisposition) {
           const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
           if (match && match[1]) filename = match[1].replace(/['"]/g, '')
         }
+
         link.setAttribute('download', filename)
         document.body.appendChild(link)
         link.click()
@@ -301,19 +327,19 @@ export const useMachineStore = defineStore('machine', {
       }
     },
 
-    // Import machines from file
+    /**
+     * Import machines from a file.
+     * Does not touch store state — caller decides whether to refresh.
+     */
     async importMachines(file) {
       try {
         const formData = new FormData()
         formData.append('file', file)
+
         const response = await axios.post(`${API_URL}/machines/import`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         })
 
-        if (response.data.success) {
-          await this.fetchMachines()
-          await this.fetchStatistics()
-        }
         return response.data
       } catch (error) {
         this.error = error.response?.data?.message || 'Import failed'
@@ -321,7 +347,9 @@ export const useMachineStore = defineStore('machine', {
       }
     },
 
-    // Clear all data (e.g., on logout)
+    /**
+     * Clear everything (e.g., on logout).
+     */
     clearAllData() {
       this.machines = []
       this.currentMachine = null

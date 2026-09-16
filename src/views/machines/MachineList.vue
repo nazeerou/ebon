@@ -863,7 +863,7 @@ const buildPhotoUrl = (pathOrUrl) => {
 
 const today = () => new Date().toISOString().slice(0, 10)
 
-// ---- Load branches (FIXED: attaches auth token) ----
+// ---- Load branches ----
 const loadBranches = async () => {
   try {
     const token =
@@ -871,15 +871,9 @@ const loadBranches = async () => {
       localStorage.getItem('auth_token') ||
       localStorage.getItem('access_token')
 
-    console.log('🌐 [branches] API_URL =', API_URL)
-    console.log('🔑 [branches] token present =', !!token)
-
     const response = await axios.get(`${API_URL}/branches`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
-
-    console.log('📦 [branches] status =', response.status)
-    console.log('📦 [branches] payload =', response.data)
 
     const payload = response?.data
 
@@ -887,24 +881,13 @@ const loadBranches = async () => {
     else if (Array.isArray(payload)) branches.value = payload
     else if (Array.isArray(payload?.branches)) branches.value = payload.branches
     else branches.value = []
-
-    console.log('✅ [branches] loaded =', branches.value.length)
-    if (branches.value[0]) {
-      console.log('🔎 [branches] sample keys =', Object.keys(branches.value[0]))
-      console.log('🔎 [branches] first item =', branches.value[0])
-    }
   } catch (err) {
-    console.error('❌ [branches] failed:', {
-      message: err.message,
-      status: err.response?.status,
-      url: err.config?.url,
-      data: err.response?.data,
-    })
+    console.error('❌ [branches] failed:', err?.message)
     branches.value = []
   }
 }
 
-// ---- Load machines (FIXED: debug block moved outside the if/else) ----
+// ---- Load machines (only called explicitly: mount, page change, search) ----
 const loadMachines = async () => {
   loading.value = true
   error.value = null
@@ -915,7 +898,8 @@ const loadMachines = async () => {
       search: searchQuery.value || undefined,
     }
     const response = await machineStore.fetchMachines(params)
-    let responseData = response.data || response
+    const responseData = response.data || response
+
     if (responseData.data && Array.isArray(responseData.data)) {
       machines.value = responseData.data
       pagination.currentPage = responseData.current_page || 1
@@ -928,23 +912,6 @@ const loadMachines = async () => {
     } else {
       machines.value = []
     }
-
-    // ===== DEBUG: branch_name inspection (runs in every branch) =====
-    if (machines.value.length) {
-      console.group('🔍 [DEBUG] Machines loaded — branch inspection')
-      machines.value.forEach((m, i) => {
-        console.log(`#${i} id=${m.id}`, {
-          machine_name: m.machine_name,
-          branch_id: m.branch_id,
-          branch_object: m.branch,
-          branch_name_from_relation: m.branch?.branch_name,
-          branch_name_flat: m.branch_name,
-          raw_keys: Object.keys(m),
-        })
-      })
-      console.groupEnd()
-    }
-    // ===== END DEBUG =====
   } catch (err) {
     console.error(err)
     error.value = err.response?.data?.message || 'Imeshindwa kupakia mashine.'
@@ -1137,6 +1104,11 @@ const openEditModal = (machine) => {
   closeActionMenu()
 }
 
+/**
+ * Save (create or update).
+ * NO refetch — the store already patched local state.
+ * We just sync `machines.value` from the store and adjust the counters.
+ */
 const saveMachine = async () => {
   if (
     !form.machine_code ||
@@ -1155,8 +1127,11 @@ const saveMachine = async () => {
     const hasRemovedPhotos = removedPhotoPaths.value.length > 0
     const photosChanged = hasNewPhotos || hasRemovedPhotos
 
+    const wasEditing = isEditing.value && editingId.value
+
+    let payload
     if (photosChanged) {
-      const payload = new FormData()
+      payload = new FormData()
       payload.append('machine_code', form.machine_code)
       payload.append('machine_name', form.machine_name)
       payload.append('serial_number', form.serial_number)
@@ -1174,17 +1149,9 @@ const saveMachine = async () => {
         if (file) payload.append(`photos[${i}]`, file)
       })
 
-      if (isEditing.value) payload.append('_method', 'PUT')
-
-      if (isEditing.value && editingId.value) {
-        await machineStore.updateMachine(editingId.value, payload)
-        showToastMessage('Mashine imehaririwa kwa mafanikio', 'success')
-      } else {
-        await machineStore.createMachine(payload)
-        showToastMessage('Mashine imesajiliwa kwa mafanikio', 'success')
-      }
+      if (wasEditing) payload.append('_method', 'PUT')
     } else {
-      const payload = {
+      payload = {
         machine_code: form.machine_code,
         machine_name: form.machine_name,
         serial_number: form.serial_number,
@@ -1193,18 +1160,33 @@ const saveMachine = async () => {
         status: form.status,
         materials: [...form.materials],
       }
-
-      if (isEditing.value && editingId.value) {
-        await machineStore.updateMachine(editingId.value, payload)
-        showToastMessage('Mashine imehaririwa kwa mafanikio', 'success')
-      } else {
-        await machineStore.createMachine(payload)
-        showToastMessage('Mashine imesajiliwa kwa mafanikio', 'success')
-      }
     }
 
-    closeModal()
-    await loadMachines()
+    const res = wasEditing
+      ? await machineStore.updateMachine(editingId.value, payload)
+      : await machineStore.createMachine(payload)
+
+    if (res?.success) {
+      showToastMessage(
+        res.message ||
+          (wasEditing ? 'Mashine imehaririwa kwa mafanikio' : 'Mashine imesajiliwa kwa mafanikio'),
+        'success',
+      )
+
+      // Sync local list from the store (already patched, no HTTP)
+      machines.value = [...machineStore.machines]
+
+      // Adjust counters locally
+      if (wasEditing) {
+        // no count change
+      } else {
+        pagination.total += 1
+      }
+
+      closeModal()
+    } else {
+      showToastMessage(res?.message || 'Hitilafu wakati wa kuhifadhi', 'error')
+    }
   } catch (err) {
     const msg =
       err.response?.data?.message ||
@@ -1243,6 +1225,10 @@ const closeTransferModal = () => {
   transferSaving.value = false
 }
 
+/**
+ * Transfer — needs refetch because the branch of the machine changes
+ * and the current machine list wouldn't reflect the transfer without it.
+ */
 const saveTransfer = async () => {
   if (!transferForm.to_branch_id || !transferForm.transfer_date) {
     showToastMessage('Tafadhali chagua tawi na tarehe.', 'error')
@@ -1255,17 +1241,18 @@ const saveTransfer = async () => {
 
   transferSaving.value = true
   try {
-    await axios.post(`${API_URL}/machines/${transferForm.machine_id}/transfers`, {
+    const res = await axios.post(`${API_URL}/machines/${transferForm.machine_id}/transfers`, {
       to_branch_id: transferForm.to_branch_id,
       transfer_date: transferForm.transfer_date,
       reason: transferForm.reason || null,
       notes: transferForm.notes || null,
     })
 
-    showToastMessage('Mashine imehamishwa kwa mafanikio', 'success')
+    showToastMessage(res?.data?.message || 'Mashine imehamishwa kwa mafanikio', 'success')
     const machineId = transferForm.machine_id
     closeTransferModal()
 
+    // Transfer changes the branch — refresh to reflect it
     await loadMachines()
 
     if (showViewModal.value && viewMachineData.value?.id === machineId) {
@@ -1300,15 +1287,31 @@ const closeDeleteModal = () => {
   showDeleteModal.value = false
   machineToDelete.value = null
 }
+
+/**
+ * Delete — NO refetch. Store already removed the item.
+ */
 const deleteMachine = async () => {
   if (!machineToDelete.value) return
   deleteLoading.value = true
+  const deletedId = machineToDelete.value.id
   try {
-    await machineStore.deleteMachine(machineToDelete.value.id)
-    showToastMessage('Mashine imefutwa', 'success')
-    closeDeleteModal()
-    await loadMachines()
-    clearSelection()
+    const res = await machineStore.deleteMachine(deletedId)
+
+    if (res?.success) {
+      showToastMessage(res.message || 'Mashine imefutwa', 'success')
+      closeDeleteModal()
+
+      // Sync local list + counters (store already removed it)
+      machines.value = [...machineStore.machines]
+      if (pagination.total > 0) pagination.total -= 1
+
+      // Also remove from selected
+      selectedMachines.value = selectedMachines.value.filter((id) => id !== deletedId)
+      updateSelectAll()
+    } else {
+      showToastMessage(res?.message || 'Imeshindwa kufuta', 'error')
+    }
   } catch (err) {
     showToastMessage(err.response?.data?.message || 'Imeshindwa kufuta', 'error')
   } finally {
@@ -1316,56 +1319,74 @@ const deleteMachine = async () => {
   }
 }
 
-// ---- Bulk ----
+// ---- Bulk status ----
 const bulkActivate = async () => {
   if (!selectedMachines.value.length)
     return showToastMessage('Chagua mashine za kuwasha', 'warning')
   try {
-    await Promise.all(
+    const results = await Promise.all(
       selectedMachines.value.map((id) => machineStore.updateMachineStatus(id, 'active')),
     )
-    showToastMessage(`Mashine ${selectedMachines.value.length} zimewashwa`, 'success')
-    await loadMachines()
+    const ok = results.filter((r) => r?.success).length
+    showToastMessage(`Mashine ${ok} zimewashwa`, 'success')
+
+    // Sync from store (already patched)
+    machines.value = [...machineStore.machines]
     clearSelection()
   } catch (err) {
     showToastMessage('Hitilafu', 'error')
   }
 }
+
 const bulkDeactivate = async () => {
   if (!selectedMachines.value.length) return showToastMessage('Chagua mashine za kuzima', 'warning')
   try {
-    await Promise.all(
+    const results = await Promise.all(
       selectedMachines.value.map((id) => machineStore.updateMachineStatus(id, 'inactive')),
     )
-    showToastMessage(`Mashine ${selectedMachines.value.length} zimezimwa`, 'success')
-    await loadMachines()
+    const ok = results.filter((r) => r?.success).length
+    showToastMessage(`Mashine ${ok} zimezimwa`, 'success')
+
+    // Sync from store (already patched)
+    machines.value = [...machineStore.machines]
     clearSelection()
   } catch (err) {
     showToastMessage('Hitilafu', 'error')
   }
 }
+
+// ---- Bulk delete ----
 const confirmBulkDelete = () => {
   if (selectedMachines.value.length) showBulkDeleteModal.value = true
 }
 const closeBulkDeleteModal = () => {
   showBulkDeleteModal.value = false
 }
+
+/**
+ * Bulk delete — NO refetch. Store already removed the items.
+ */
 const bulkDelete = async () => {
   if (!selectedMachines.value.length) return
   deleteLoading.value = true
+  const ids = [...selectedMachines.value]
   try {
-    const results = await Promise.allSettled(
-      selectedMachines.value.map((id) => machineStore.deleteMachine(id)),
-    )
-    const successful = results.filter(
-      (r) => r.status === 'fulfilled' && (r.value?.success || r.value?.status === 'success'),
-    ).length
-    showToastMessage(`${successful} mashine zimefutwa`, successful ? 'success' : 'error')
-    closeBulkDeleteModal()
-    await loadMachines()
-    clearSelection()
+    const res = await machineStore.bulkDeleteMachines(ids)
+
+    if (res?.success) {
+      showToastMessage(res.message || `${ids.length} mashine zimefutwa`, 'success')
+      closeBulkDeleteModal()
+
+      // Sync from store
+      machines.value = [...machineStore.machines]
+      pagination.total = Math.max(0, pagination.total - ids.length)
+
+      clearSelection()
+    } else {
+      showToastMessage(res?.message || 'Hitilafu', 'error')
+    }
   } catch (err) {
-    showToastMessage('Hitilafu', 'error')
+    showToastMessage(err.response?.data?.message || 'Hitilafu', 'error')
   } finally {
     deleteLoading.value = false
   }
@@ -1380,7 +1401,8 @@ const toggleSelectAll = () => {
   selectedMachines.value = selectAll.value ? machines.value.map((m) => m.id) : []
 }
 const updateSelectAll = () => {
-  selectAll.value = selectedMachines.value.length === machines.value.length
+  selectAll.value =
+    selectedMachines.value.length > 0 && selectedMachines.value.length === machines.value.length
 }
 
 // ---- Action menu ----
