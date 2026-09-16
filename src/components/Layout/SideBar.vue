@@ -108,7 +108,7 @@
             @click="closeSidebarOnMobile"
           >
             <i class="fas fa-coins"></i>
-            <span>Token(s)</span>
+            <span>Tokens / Mtaji </span>
           </router-link>
         </div>
       </div>

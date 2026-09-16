@@ -38,7 +38,7 @@
         @click="isAdmin && quickAction('tokens/lists')"
       >
         <i class="fas fa-chart-bar"></i>
-        <span>Token Recorded</span>
+        <span>Tokens / Mtaji </span>
       </button>
     </div>
 
