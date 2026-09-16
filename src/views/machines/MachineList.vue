@@ -429,6 +429,12 @@
                       {{ branch.branch_name }}
                     </option>
                   </select>
+
+                  <!-- ===== DEBUG: form branch select ===== -->
+                  <small style="font-size: 10px; color: #7c2d12; font-family: monospace">
+                    branches.length={{ branches.length }} | selected={{ form.branch_id }}
+                  </small>
+                  <!-- ===== END DEBUG ===== -->
                 </div>
                 <div class="form-group">
                   <label>Tarehe ya Ufungaji <span class="required">*</span></label>
@@ -897,6 +903,22 @@ const loadMachines = async () => {
       pagination.to = responseData.to || 0
     } else if (Array.isArray(responseData)) {
       machines.value = responseData
+      // ===== DEBUG: branch_name inspection =====
+      if (responseData.data && responseData.data.length) {
+        console.group('🔍 [DEBUG] Machines loaded — branch inspection')
+        responseData.data.forEach((m, i) => {
+          console.log(`#${i} id=${m.id}`, {
+            machine_name: m.machine_name,
+            branch_id: m.branch_id,
+            branch_object: m.branch,
+            branch_name_from_relation: m.branch?.branch_name,
+            branch_name_flat: m.branch_name, // in case API flattens it
+            branch_names: m.branch_names, // in case of plural
+            raw_keys: Object.keys(m),
+          })
+        })
+        console.groupEnd()
+      }
     } else {
       machines.value = []
     }
