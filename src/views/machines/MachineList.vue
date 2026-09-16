@@ -770,7 +770,7 @@ const form = reactive({
 })
 
 // Materials
-const materialOptions = ['Betri', 'Solar', 'Grid', 'Generator', 'Inverter', 'Mafuta']
+const materialOptions = ['Betri', 'Solar', 'Grid', 'Generator', 'Inverter']
 const materialIcons = {
   Betri: 'fas fa-car-battery',
   Solar: 'fas fa-solar-panel',
