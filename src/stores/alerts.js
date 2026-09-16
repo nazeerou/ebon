@@ -10,7 +10,7 @@ export const useAlertStore = defineStore('alerts', {
     alerts: [],
     summary: { warning: 0, critical: 0, total: 0 },
     thresholds: { warning_days: 3, critical_days: 7 },
-    branch: 'Bonanza',
+    branch: '',
 
     loading: false,
     error: null,

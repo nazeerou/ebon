@@ -7,8 +7,8 @@
           <i class="fas fa-list-ul"></i>
         </div>
         <div class="header-text">
-          <h2>Orodha ya Tokens (Amount)</h2>
-          <p class="subtitle">Tokens zote zimegawanywa kwa Tawi</p>
+          <h2>Kiasi Kichoachwa</h2>
+          <p class="subtitle">Pesa zote zimegawanywa kwa Tawi</p>
         </div>
       </header>
 
@@ -52,7 +52,7 @@
         <!-- Summary strip -->
         <div class="summary-strip">
           <div class="summary-item">
-            <span class="summary-label">Jumla ya Kiasi Kilichowekwa</span>
+            <span class="summary-label">Jumla ya Kiasi Kilichoachwa</span>
             <span class="summary-value amount">
               {{ formatCurrency(summary.grand_total) }}
             </span>
@@ -81,7 +81,7 @@
                 <div class="group-info">
                   <div class="group-name">{{ group.branch_name }}</div>
                   <div class="group-meta">
-                    <span><i class="fas fa-receipt"></i> {{ group.token_count }} tokens</span>
+                    <span><i class="fas fa-receipt"></i> {{ group.token_count }} Idadi</span>
                     <span v-if="group.location">
                       <i class="fas fa-map-marker-alt"></i> {{ group.location }}
                     </span>
@@ -91,7 +91,7 @@
 
               <div class="group-right">
                 <div class="group-total">
-                  {{ formatCurrency(group.total_amount) }}
+                  <!-- {{ formatCurrency(group.total_amount) }} -->
                 </div>
                 <i
                   class="fas chevron"
@@ -111,7 +111,7 @@
                       <th>Reference</th>
                       <th>Tarehe</th>
                       <th>Aliyerekodi</th>
-                      <th class="text-right" style="text-align: right">Kiasi Kilichowekwa</th>
+                      <th class="text-right" style="text-align: right">Kiasi Kilichoachwa</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -132,12 +132,12 @@
                   </tbody>
                   <tfoot>
                     <tr>
-                      <td colspan="3" class="text-right">
+                      <!-- <td colspan="3" class="text-right">
                         <strong>Jumla ya tawi</strong>
                       </td>
                       <td class="text-right">
                         <strong>{{ formatCurrency(group.total_amount) }}</strong>
-                      </td>
+                      </td> -->
                     </tr>
                   </tfoot>
                 </table>
