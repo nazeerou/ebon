@@ -7,8 +7,8 @@
           <i class="fas fa-coins"></i>
         </div>
         <div>
-          <h2>Rekodi Token</h2>
-          <p class="subtitle">Sajili kiasi cha token kwa Tawi / Eneo</p>
+          <h2>Rekodi Mtaji Unaoachwa</h2>
+          <p class="subtitle">Rekodi kiasi cha Mtaji kwa Tawi / Eneo</p>
         </div>
       </header>
 
@@ -64,7 +64,7 @@
 
         <!-- Amount -->
         <div class="form-group">
-          <label for="amount">Kiasi (Amount)</label>
+          <label for="amount">Kiasi kilichoachwa </label>
           <div class="amount-input">
             <span class="currency-prefix">TZS</span>
             <input
@@ -81,7 +81,7 @@
 
         <!-- Created Date -->
         <div class="form-group">
-          <label for="created_date">Tarehe (Created Date)</label>
+          <label for="created_date">Tarehe </label>
           <div class="date-input">
             <span class="date-prefix">
               <i class="fas fa-calendar-day"></i>
