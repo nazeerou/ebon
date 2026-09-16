@@ -35,7 +35,7 @@
       <button
         class="quick-action-btn"
         :class="{ disabled: !isAdmin }"
-        @click="isAdmin && quickAction('tokens/lists')"
+        @click="isAdmin && quickAction('tokens')"
       >
         <i class="fas fa-chart-bar"></i>
         <span>Tokens / Mtaji </span>
