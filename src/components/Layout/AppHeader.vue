@@ -324,13 +324,9 @@ const formatRole = (role) => {
   const roles = {
     admin: 'Msimamizi Mkuu',
     manager: 'Meneja',
-    officer: 'Afisa Mikopo',
-    cashier: 'Keshia',
-    viewer: 'Mtazamaji',
-    accountant: 'Mhasibu',
-    loan_officer: 'Afisa Mikopo',
+    officer: 'Mkusanyaji',
   }
-  return roles[role] || 'Afisa Mikopo'
+  return roles[role] || 'Mkusanyaji'
 }
 
 // Change Password

@@ -1,2411 +1,933 @@
 <template>
-  <div class="users-list-container">
-    <!-- Header -->
-    <div class="page-header">
-      <div class="header-left">
-        <h1>Watumiaji</h1>
-        <p class="users-count" v-if="!loading">
-          Jumla ya watumiaji: <strong>{{ formatNumber(pagination.total) }}</strong>
-        </p>
-      </div>
-      <div class="header-actions">
-        <button class="btn-export" @click="exportUsers">
-          <i class="fas fa-download"></i>
-          <span>Pakua</span>
-        </button>
-        <button class="btn-import" @click="importUsers">
-          <i class="fas fa-upload"></i>
-          <span>Ingiza</span>
-        </button>
-        <button class="btn-primary" @click="openRegisterModal">
-          <i class="fas fa-user-plus"></i>
-          <span>Sajili Mtumiaji</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Filters Card -->
-    <div class="filters-card">
-      <div class="filters-grid">
-        <!-- Search -->
-        <div class="filter-group search-group">
-          <div class="search-input-wrapper">
-            <i class="fas fa-search search-icon"></i>
-            <input
-              type="text"
-              v-model="filters.search"
-              @input="debouncedSearch"
-              placeholder="Tafuta kwa jina, simu, au barua pepe..."
-              class="form-control search-input"
-            />
-            <button v-if="filters.search" class="clear-search" @click="clearSearch">
-              <i class="fas fa-times"></i>
-            </button>
+  <div class="user-page">
+    <div class="list-card">
+      <!-- Header -->
+      <header class="list-header">
+        <div class="header-left">
+          <div class="header-icon">
+            <i class="fas fa-users-cog"></i>
+          </div>
+          <div>
+            <h2>Watumiaji</h2>
+            <p class="subtitle">Orodha ya watumiaji wote wa mfumo</p>
           </div>
         </div>
 
-        <!-- Role Filter -->
-        <div class="filter-group">
-          <label>
-            <i class="fas fa-user-tag"></i>
-            Nafasi
-          </label>
-          <select v-model="filters.role" @change="loadUsers" class="form-control">
-            <option value="">Wote</option>
-            <option value="admin">Admin</option>
-            <option value="manager">Meneja</option>
-            <option value="officer">Afisa Mikopo</option>
-            <option value="cashier">Keshia</option>
-            <option value="viewer">Mtazamaji</option>
-          </select>
-        </div>
+        <button class="btn-create" @click="openCreate">
+          <i class="fas fa-user-plus"></i>
+          Ongeza Mtumiaji
+        </button>
+      </header>
 
-        <!-- Status Filter -->
-        <div class="filter-group">
-          <label>
-            <i class="fas fa-circle"></i>
-            Hali
-          </label>
-          <select v-model="filters.status" @change="loadUsers" class="form-control">
-            <option value="">Wote</option>
-            <option value="active">Wanaofanya kazi</option>
-            <option value="inactive">Hawafanyi kazi</option>
-            <option value="suspended">Wamesimamishwa</option>
-          </select>
+      <!-- Summary strip -->
+      <div class="summary-strip" v-if="users.length">
+        <div class="summary-item">
+          <span class="summary-label">Jumla ya Watumiaji</span>
+          <span class="summary-value">{{ formatNumber(userStore.total || users.length) }}</span>
         </div>
-
-        <!-- Sort By -->
-        <div class="filter-group">
-          <label>
-            <i class="fas fa-sort"></i>
-            Panga kwa
-          </label>
-          <select v-model="filters.sortBy" @change="loadUsers" class="form-control">
-            <option value="created_at">Tarehe ya Kujiunga</option>
-            <option value="first_name">Jina</option>
-            <option value="email">Barua Pepe</option>
-          </select>
+        <div class="summary-item">
+          <span class="summary-label">Wanaotumika</span>
+          <span class="summary-value">{{ formatNumber(activeCount) }}</span>
         </div>
-
-        <!-- Sort Order -->
-        <div class="filter-group">
-          <label>
-            <i class="fas fa-sort-amount-down"></i>
-            Mpango
-          </label>
-          <select v-model="filters.sortOrder" @change="loadUsers" class="form-control">
-            <option value="desc">Kushuka (Zinazoanza)</option>
-            <option value="asc">Kupanda (Zinazomaliza)</option>
-          </select>
-        </div>
-
-        <!-- Items Per Page -->
-        <div class="filter-group">
-          <label>
-            <i class="fas fa-list"></i>
-            Idadi kwa Ukurasa
-          </label>
-          <select v-model="filters.perPage" @change="changePerPage" class="form-control">
-            <option value="10">10</option>
-            <option value="20">20</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
-          </select>
+        <div class="summary-item">
+          <span class="summary-label">Wasimamizi</span>
+          <span class="summary-value">{{ formatNumber(adminCount) }}</span>
         </div>
       </div>
 
-      <!-- Active Filters -->
-      <div v-if="hasActiveFilters" class="active-filters">
-        <span class="active-filters-label">
-          <i class="fas fa-filter"></i>
-          Vichujio vilivyowekwa:
-        </span>
-        <div class="filter-tags">
-          <span v-if="filters.search" class="filter-tag">
-            <i class="fas fa-search"></i>
-            "{{ filters.search }}"
-            <i @click="clearFilter('search')" class="fas fa-times remove-filter"></i>
-          </span>
-          <span v-if="filters.role" class="filter-tag">
-            <i class="fas fa-user-tag"></i>
-            {{ getRoleText(filters.role) }}
-            <i @click="clearFilter('role')" class="fas fa-times remove-filter"></i>
-          </span>
-          <span v-if="filters.status" class="filter-tag">
-            <i class="fas fa-circle"></i>
-            {{ getStatusText(filters.status) }}
-            <i @click="clearFilter('status')" class="fas fa-times remove-filter"></i>
-          </span>
-          <button @click="clearAllFilters" class="clear-all-btn">
-            <i class="fas fa-trash-alt"></i>
-            Futa yote
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Statistics Cards -->
-    <div class="stats-cards">
-      <div class="stat-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #3498db, #2980b9)">
-          <i class="fas fa-users"></i>
-        </div>
-        <div class="stat-details">
-          <span class="stat-value">{{ formatNumber(statistics.total) }}</span>
-          <span class="stat-label">Jumla ya Watumiaji</span>
-        </div>
+      <!-- Loading -->
+      <div v-if="userStore.loading" class="loading-inline">
+        <div class="spinner-sm"></div>
+        <span>Inapakia watumiaji...</span>
       </div>
 
-      <div class="stat-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #27ae60, #229954)">
-          <i class="fas fa-check-circle"></i>
-        </div>
-        <div class="stat-details">
-          <span class="stat-value">{{ formatNumber(statistics.active) }}</span>
-          <span class="stat-label">Wanaofanya kazi</span>
-        </div>
+      <!-- Error -->
+      <div v-else-if="userStore.error" class="error-inline">
+        <i class="fas fa-exclamation-circle"></i>
+        <span>{{ userStore.error }}</span>
       </div>
 
-      <div class="stat-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #f39c12, #e67e22)">
-          <i class="fas fa-user-tag"></i>
-        </div>
-        <div class="stat-details">
-          <span class="stat-value">{{ formatNumber(statistics.admins) }}</span>
-          <span class="stat-label">Watumiaji Admin</span>
-        </div>
+      <!-- Empty -->
+      <div v-else-if="!users.length" class="empty-inline">
+        <i class="fas fa-user-slash"></i>
+        <span>Hakuna watumiaji waliosajiliwa bado.</span>
       </div>
 
-      <div class="stat-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #9b59b6, #8e44ad)">
-          <i class="fas fa-clock"></i>
-        </div>
-        <div class="stat-details">
-          <span class="stat-value">{{ formatNumber(statistics.recent) }}</span>
-          <span class="stat-label">Waliounga Wiki Hii</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Loading State -->
-    <div v-if="loading" class="loading-state">
-      <div class="spinner"></div>
-      <p>Inapakia watumiaji...</p>
-    </div>
-
-    <!-- Error State -->
-    <div v-else-if="error" class="error-state">
-      <i class="fas fa-exclamation-circle"></i>
-      <h3>Hitilafu imetokea</h3>
-      <p>{{ error }}</p>
-      <button @click="loadUsers" class="btn-retry">
-        <i class="fas fa-redo"></i>
-        Jaribu Tena
-      </button>
-    </div>
-
-    <!-- Users Table -->
-    <div v-else class="table-card">
-      <div class="table-responsive">
-        <table class="users-table">
+      <!-- Table -->
+      <div v-else class="table-wrap">
+        <table class="user-table">
           <thead>
             <tr>
-              <th class="checkbox-col">
-                <input type="checkbox" v-model="selectAll" @change="toggleSelectAll" />
-              </th>
-              <th>Mtumiaji</th>
-              <th>Mawasiliano</th>
+              <th>Jina Kamili</th>
+              <th>Barua Pepe</th>
+              <th>Namba ya Simu</th>
               <th>Nafasi</th>
-              <th>Hali</th>
-              <th>Mwisho Kuingia</th>
-              <th>Tarehe</th>
-              <th>Vitendo</th>
+              <th>Wajibu</th>
+              <th class="text-center">Hali</th>
+              <th class="text-center">Vitendo</th>
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="user in users"
-              :key="user.id"
-              :class="{ 'row-selected': selectedUsers.includes(user.id) }"
-            >
-              <td class="checkbox-col">
-                <input
-                  type="checkbox"
-                  v-model="selectedUsers"
-                  :value="user.id"
-                  @change="updateSelectAll"
-                />
-              </td>
+            <tr v-for="u in users" :key="u.id">
               <td>
                 <div class="user-cell">
-                  <div class="user-avatar-wrapper">
-                    <!-- <img
-                      :src="getUserProfilePhoto(user)"
-                      :alt="user.first_name"
-                      class="user-avatar"
-                    /> -->
-                    <span class="status-indicator" :class="user.status"></span>
-                  </div>
-                  <div class="user-info">
-                    <span class="user-name"> {{ user.first_name }} {{ user.last_name }} </span>
-                    <span class="user-username">@{{ user.username || user.email }}</span>
-                  </div>
+                  <img :src="avatarFor(u)" :alt="fullName(u)" class="cell-avatar" />
+                  <span class="user-name">{{ fullName(u) }}</span>
                 </div>
               </td>
               <td>
-                <div class="contact-info">
-                  <span class="contact-item">
-                    <i class="fas fa-envelope"></i>
-                    {{ user.email }}
-                  </span>
-                  <span v-if="user.phone" class="contact-item">
-                    <i class="fas fa-phone-alt"></i>
-                    {{ user.phone }}
-                  </span>
-                </div>
+                <span class="desc" :title="u.email">{{ u.email || '—' }}</span>
               </td>
               <td>
-                <span class="role-badge" :class="user.role">
-                  <i :class="getRoleIcon(user.role)"></i>
-                  {{ getRoleText(user.role) }}
+                <a
+                  v-if="u.phone"
+                  :href="`tel:${u.phone}`"
+                  class="phone-link"
+                  :title="`Piga simu ${u.phone}`"
+                >
+                  <i class="fas fa-phone-alt"></i>
+                  {{ formatPhone(u.phone) }}
+                </a>
+                <span v-else class="muted">—</span>
+              </td>
+              <td>
+                <span v-if="u.position" class="position-tag">
+                  <i class="fas fa-briefcase"></i>
+                  {{ u.position }}
+                </span>
+                <span v-else class="muted">—</span>
+              </td>
+              <td>
+                <span class="role-badge" :class="'role-' + (u.role || 'viewer')">
+                  {{ roleLabel(u.role) }}
                 </span>
               </td>
-              <td>
-                <span class="status-badge" :class="user.status">
-                  {{ getStatusText(user.status) }}
+              <td class="text-center">
+                <span class="status-badge" :class="u.is_active ? 'active' : 'inactive'">
+                  {{ u.is_active ? 'Hai' : 'Imesimamishwa' }}
                 </span>
               </td>
-              <td>
-                <div class="login-info" v-if="user.last_login_at">
-                  <span class="login-date">{{ formatDate(user.last_login_at) }}</span>
-                  <span class="login-time">{{ formatTime(user.last_login_at) }}</span>
-                </div>
-                <span v-else class="text-muted">Hajawahi kuingia</span>
-              </td>
-              <td>
-                <div class="date-info">
-                  <span class="date">{{ formatDate(user.created_at) }}</span>
-                  <span class="time">{{ formatTime(user.created_at) }}</span>
-                </div>
-              </td>
-              <td>
-                <div class="action-dropdown">
-                  <button class="action-menu-btn" @click.stop="toggleActionMenu(user.id)">
-                    <i class="fas fa-ellipsis-v"></i>
+              <td class="text-center">
+                <div class="action-group">
+                  <button class="btn-icon edit" @click="openEdit(u)" title="Hariri">
+                    <i class="fas fa-pen"></i>
                   </button>
-                  <div v-if="activeActionMenu === user.id" class="action-menu">
-                    <router-link
-                      :to="`/users/${user.id}`"
-                      class="action-menu-item"
-                      @click="closeActionMenu"
-                    >
-                      <i class="fas fa-eye"></i>
-                      <span>Angalia</span>
-                    </router-link>
-                    <router-link
-                      :to="`/users/${user.id}/edit`"
-                      class="action-menu-item"
-                      @click="closeActionMenu"
-                    >
-                      <i class="fas fa-edit"></i>
-                      <span>Hariri</span>
-                    </router-link>
-                    <button @click="resetUserPassword(user)" class="action-menu-item">
-                      <i class="fas fa-key"></i>
-                      <span>Badili Nenosiri</span>
-                    </button>
-                    <button
-                      @click="toggleUserStatus(user)"
-                      class="action-menu-item"
-                      :class="{ 'text-danger': user.status === 'active' }"
-                    >
-                      <i
-                        :class="user.status === 'active' ? 'fas fa-ban' : 'fas fa-check-circle'"
-                      ></i>
-                      <span>{{ user.status === 'active' ? 'Zima' : 'Washa' }}</span>
-                    </button>
-                    <button @click="confirmDelete(user)" class="action-menu-item text-danger">
-                      <i class="fas fa-trash-alt"></i>
-                      <span>Futa</span>
-                    </button>
-                  </div>
-                </div>
-              </td>
-            </tr>
-            <tr v-if="users.length === 0">
-              <td colspan="8" class="text-center">
-                <div class="empty-state-small">
-                  <i class="fas fa-users"></i>
-                  <p>Hakuna watumiaji waliopatikana</p>
+                  <button
+                    class="btn-icon danger"
+                    @click="confirmDelete(u)"
+                    title="Futa"
+                    :disabled="u.id === currentUserId"
+                  >
+                    <i class="fas fa-trash"></i>
+                  </button>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-
-      <!-- Bulk Actions -->
-      <div v-if="selectedUsers.length > 0" class="bulk-actions">
-        <div class="bulk-info">
-          <i class="fas fa-check-circle"></i>
-          <span
-            >Umechagua <strong>{{ formatNumber(selectedUsers.length) }}</strong> watumiaji</span
-          >
-        </div>
-        <div class="bulk-buttons">
-          <button class="btn-bulk" @click="bulkActivate">
-            <i class="fas fa-check"></i>
-            Washa
-          </button>
-          <button class="btn-bulk" @click="bulkDeactivate">
-            <i class="fas fa-ban"></i>
-            Zima
-          </button>
-          <button class="btn-bulk text-danger" @click="confirmBulkDelete">
-            <i class="fas fa-trash-alt"></i>
-            Futa
-          </button>
-          <button class="btn-bulk" @click="clearSelection">
-            <i class="fas fa-times"></i>
-            Ghairi
-          </button>
-        </div>
-      </div>
-
-      <!-- Pagination -->
-      <div class="pagination-section" v-if="pagination.lastPage > 1">
-        <div class="pagination-info">
-          <i class="fas fa-info-circle"></i>
-          Inaonyesha <strong>{{ formatNumber(pagination.from) }}</strong> -
-          <strong>{{ formatNumber(pagination.to) }}</strong> kati ya
-          <strong>{{ formatNumber(pagination.total) }}</strong> watumiaji
-        </div>
-
-        <div class="pagination-controls">
-          <div class="pagination-buttons">
-            <button
-              @click="changePage(1)"
-              :disabled="pagination.currentPage === 1"
-              class="pagination-btn"
-              title="Ukurasa wa Kwanza"
-            >
-              <i class="fas fa-angle-double-left"></i>
-            </button>
-
-            <button
-              @click="changePage(pagination.currentPage - 1)"
-              :disabled="pagination.currentPage === 1"
-              class="pagination-btn"
-              title="Ukurasa Ulio Nyuma"
-            >
-              <i class="fas fa-chevron-left"></i>
-            </button>
-
-            <button
-              v-for="page in paginationPages"
-              :key="page"
-              @click="changePage(page)"
-              class="pagination-btn"
-              :class="{ active: page === pagination.currentPage }"
-            >
-              {{ formatNumber(page) }}
-            </button>
-
-            <button
-              @click="changePage(pagination.currentPage + 1)"
-              :disabled="pagination.currentPage === pagination.lastPage"
-              class="pagination-btn"
-              title="Ukurasa Unaofuata"
-            >
-              <i class="fas fa-chevron-right"></i>
-            </button>
-
-            <button
-              @click="changePage(pagination.lastPage)"
-              :disabled="pagination.currentPage === pagination.lastPage"
-              class="pagination-btn"
-              title="Ukurasa wa Mwisho"
-            >
-              <i class="fas fa-angle-double-right"></i>
-            </button>
-          </div>
-
-          <div class="page-size-selector">
-            <label>Onyesha:</label>
-            <select v-model="filters.perPage" @change="changePerPage" class="per-page-select">
-              <option value="10">10</option>
-              <option value="20">20</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="page-indicator">
-          Ukurasa <strong>{{ formatNumber(pagination.currentPage) }}</strong> kati ya
-          <strong>{{ formatNumber(pagination.lastPage) }}</strong>
-        </div>
-      </div>
     </div>
 
-    <!-- Register User Modal -->
-    <div v-if="showRegisterModal" class="modal-overlay" @click="closeRegisterModal">
-      <div class="modal-content register-modal" @click.stop>
-        <div class="modal-header">
-          <div class="modal-header-left">
-            <i class="fas fa-user-plus"></i>
-            <h3>Sajili Mtumiaji Mpya</h3>
+    <!-- ---------- CREATE / EDIT MODAL ---------- -->
+    <div v-if="showModal" class="modal-backdrop" @click.self="closeModal">
+      <div class="modal-card">
+        <header class="modal-header">
+          <div>
+            <h3>{{ isEditing ? 'Hariri Mtumiaji' : 'Ongeza Mtumiaji' }}</h3>
+            <p class="modal-subtitle">
+              {{ isEditing ? 'Badilisha taarifa za mtumiaji' : 'Jaza taarifa za mtumiaji mpya' }}
+            </p>
           </div>
-          <div class="modal-header-actions">
-            <button class="close-btn" @click="closeRegisterModal">
-              <i class="fas fa-times"></i>
-            </button>
-          </div>
-        </div>
+          <button class="modal-close" @click="closeModal">
+            <i class="fas fa-times"></i>
+          </button>
+        </header>
 
-        <form @submit.prevent="registerUser" class="register-form">
-          <div class="modal-body">
-            <div class="form-row">
-              <div class="form-group">
-                <label>Jina la Kwanza <span class="required">*</span></label>
-                <div class="input-group">
-                  <i class="fas fa-user"></i>
-                  <input
-                    type="text"
-                    v-model="registerForm.first_name"
-                    class="form-control"
-                    :class="{ 'is-invalid': errors.first_name }"
-                    placeholder="Weka jina la kwanza"
-                    required
-                  />
-                </div>
-                <span v-if="errors.first_name" class="error-text">{{ errors.first_name }}</span>
-              </div>
-
-              <div class="form-group">
-                <label>Jina la Mwisho <span class="required">*</span></label>
-                <div class="input-group">
-                  <i class="fas fa-user"></i>
-                  <input
-                    type="text"
-                    v-model="registerForm.last_name"
-                    class="form-control"
-                    :class="{ 'is-invalid': errors.last_name }"
-                    placeholder="Weka jina la mwisho"
-                    required
-                  />
-                </div>
-                <span v-if="errors.last_name" class="error-text">{{ errors.last_name }}</span>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label>Barua Pepe <span class="required">*</span></label>
-                <div class="input-group">
-                  <i class="fas fa-envelope"></i>
-                  <input
-                    type="email"
-                    v-model="registerForm.email"
-                    class="form-control"
-                    :class="{ 'is-invalid': errors.email }"
-                    placeholder="Eg. salim.amiri@tamara.co.tz"
-                    required
-                  />
-                </div>
-                <span v-if="errors.email" class="error-text">{{ errors.email }}</span>
-              </div>
-
-              <div class="form-group">
-                <label>Namba ya Simu</label>
-                <div class="input-group">
-                  <i class="fas fa-phone-alt"></i>
-                  <input
-                    type="tel"
-                    v-model="registerForm.phone"
-                    class="form-control"
-                    placeholder="07xx xxx xxx"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label>Jina la Mtumiaji</label>
-                <div class="input-group">
-                  <i class="fas fa-at"></i>
-                  <input
-                    type="text"
-                    v-model="registerForm.username"
-                    class="form-control"
-                    placeholder="Jina la kuingia"
-                  />
-                </div>
-                <small class="form-text">Ikiwa wazi Itatengenezwa kiotomatiki</small>
-              </div>
-
-              <div class="form-group">
-                <label>Nafasi <span class="required">*</span></label>
-                <div class="input-group">
-                  <i class="fas fa-user-tag"></i>
-                  <select v-model="registerForm.role" class="form-control" required>
-                    <option value="">Chagua Nafasi</option>
-                    <option value="admin">Admin</option>
-                    <option value="manager">Meneja</option>
-                    <option value="officer">Afisa Mikopo</option>
-                    <option value="cashier">Keshia</option>
-                    <option value="viewer">Mtazamaji</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label>Nenosiri <span class="required">*</span></label>
-                <div class="input-group">
-                  <i class="fas fa-lock"></i>
-                  <input
-                    :type="showPassword ? 'text' : 'password'"
-                    v-model="registerForm.password"
-                    class="form-control"
-                    :class="{ 'is-invalid': errors.password }"
-                    placeholder="Weka nenosiri"
-                    required
-                  />
-                  <button type="button" class="password-toggle" @click="togglePasswordVisibility">
-                    <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
-                  </button>
-                </div>
-                <span v-if="errors.password" class="error-text">{{ errors.password }}</span>
-                <small class="form-text">Nenosiri lazima iwe na herufi 6 au zaidi</small>
-              </div>
-
-              <div class="form-group">
-                <label>Rudia Nenosiri <span class="required">*</span></label>
-                <div class="input-group">
-                  <i class="fas fa-lock"></i>
-                  <input
-                    :type="showConfirmPassword ? 'text' : 'password'"
-                    v-model="registerForm.password_confirmation"
-                    class="form-control"
-                    placeholder="Rudia nenosiri"
-                    required
-                  />
-                  <button
-                    type="button"
-                    class="password-toggle"
-                    @click="toggleConfirmPasswordVisibility"
-                  >
-                    <i :class="showConfirmPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
-                  </button>
-                </div>
-              </div>
+        <form @submit.prevent="handleSubmit" class="modal-form">
+          <!-- First Name + Last Name -->
+          <div class="form-row">
+            <div class="form-group">
+              <label for="first_name">Jina la Kwanza *</label>
+              <input
+                id="first_name"
+                type="text"
+                class="form-control"
+                :class="{ 'has-error': fieldErrors.first_name }"
+                v-model="form.first_name"
+                placeholder="mfano: Juma"
+                autocomplete="given-name"
+              />
+              <small v-if="fieldErrors.first_name" class="field-error">
+                <i class="fas fa-exclamation-circle"></i> {{ fieldErrors.first_name }}
+              </small>
             </div>
 
             <div class="form-group">
-              <label>Picha ya Profaili</label>
-              <div class="file-upload-wrapper">
-                <div class="file-upload-preview" v-if="profilePhotoPreview">
-                  <img :src="profilePhotoPreview" alt="Profile preview" />
-                  <button type="button" class="remove-photo" @click="removeProfilePhoto">
-                    <i class="fas fa-times"></i>
-                  </button>
-                </div>
-                <div v-else class="file-upload-placeholder" @click="triggerFileInput">
-                  <i class="fas fa-cloud-upload-alt"></i>
-                  <p>Bonyeza kupakia picha</p>
-                  <small>PNG, JPG, GIF (Max 2MB)</small>
-                </div>
-                <input
-                  type="file"
-                  ref="profilePhotoInput"
-                  @change="handleProfilePhoto"
-                  accept="image/jpeg,image/png,image/jpg,image/gif"
-                  style="display: none"
-                />
-              </div>
+              <label for="last_name">Jina la Mwisho *</label>
+              <input
+                id="last_name"
+                type="text"
+                class="form-control"
+                :class="{ 'has-error': fieldErrors.last_name }"
+                v-model="form.last_name"
+                placeholder="mfano: Ramadhan"
+                autocomplete="family-name"
+              />
+              <small v-if="fieldErrors.last_name" class="field-error">
+                <i class="fas fa-exclamation-circle"></i> {{ fieldErrors.last_name }}
+              </small>
             </div>
           </div>
 
-          <div class="modal-footer">
-            <button type="button" class="btn-secondary" @click="closeRegisterModal">
-              <i class="fas fa-times"></i>
-              Ghairi
-            </button>
-            <button type="submit" class="btn-primary" :disabled="registerLoading">
-              <span v-if="registerLoading" class="spinner-small"></span>
-              <span v-else>
-                <i class="fas fa-save"></i>
-                Sajili Mtumiaji
-              </span>
+          <!-- Email -->
+          <div class="form-group">
+            <label for="email">Barua Pepe *</label>
+            <div class="input-with-icon" :class="{ 'has-error': fieldErrors.email }">
+              <span class="input-prefix"><i class="fas fa-envelope"></i></span>
+              <input
+                id="email"
+                type="email"
+                class="form-control"
+                v-model="form.email"
+                placeholder="juma@ramajo.co.tz"
+                autocomplete="email"
+              />
+            </div>
+            <small v-if="fieldErrors.email" class="field-error">
+              <i class="fas fa-exclamation-circle"></i> {{ fieldErrors.email }}
+            </small>
+          </div>
+
+          <!-- Phone -->
+          <div class="form-group">
+            <label for="phone">Namba ya Simu *</label>
+            <div class="input-with-icon" :class="{ 'has-error': fieldErrors.phone }">
+              <span class="input-prefix"><i class="fas fa-phone"></i></span>
+              <input
+                id="phone"
+                type="tel"
+                class="form-control"
+                v-model="form.phone"
+                placeholder="0712 345 678"
+                autocomplete="tel"
+              />
+            </div>
+            <small v-if="fieldErrors.phone" class="field-error">
+              <i class="fas fa-exclamation-circle"></i> {{ fieldErrors.phone }}
+            </small>
+            <small v-else class="field-hint"> Muundo: 0712 345 678 au +255 712 345 678 </small>
+          </div>
+
+          <!-- Position -->
+          <div class="form-group">
+            <label for="position">Nafasi (Position) *</label>
+            <div class="input-with-icon" :class="{ 'has-error': fieldErrors.position }">
+              <span class="input-prefix"><i class="fas fa-briefcase"></i></span>
+              <input
+                id="position"
+                type="text"
+                class="form-control"
+                v-model="form.position"
+                placeholder="mfano: Meneja wa Tawi, Fundi, Mkusanyaji"
+              />
+            </div>
+            <small v-if="fieldErrors.position" class="field-error">
+              <i class="fas fa-exclamation-circle"></i> {{ fieldErrors.position }}
+            </small>
+          </div>
+
+          <!-- Role -->
+          <div class="form-group">
+            <label for="role">Wajibu (Role) *</label>
+            <select
+              id="role"
+              class="form-control"
+              :class="{ 'has-error': fieldErrors.role }"
+              v-model="form.role"
+            >
+              <option value="admin">Msimamizi Mkuu</option>
+              <option value="meneja">Meneja</option>
+              <option value="mkusanyaji">Mkusanyaji</option>
+            </select>
+            <small v-if="fieldErrors.role" class="field-error">
+              <i class="fas fa-exclamation-circle"></i> {{ fieldErrors.role }}
+            </small>
+          </div>
+
+          <!-- Password (required on create, optional on edit) -->
+          <div class="form-group">
+            <label for="password">
+              Neno la Siri <span v-if="!isEditing">*</span>
+              <span v-else class="optional-tag">(acha wazi kama hutaki kubadilisha)</span>
+            </label>
+            <div class="input-with-icon" :class="{ 'has-error': fieldErrors.password }">
+              <span class="input-prefix"><i class="fas fa-lock"></i></span>
+              <input
+                id="password"
+                :type="showPassword ? 'text' : 'password'"
+                class="form-control"
+                v-model="form.password"
+                :placeholder="isEditing ? 'Acha wazi kubaki ile ile' : 'Angalau herufi 6'"
+                minlength="6"
+                autocomplete="new-password"
+              />
+              <button
+                type="button"
+                class="input-suffix"
+                @click="showPassword = !showPassword"
+                :aria-label="showPassword ? 'Ficha neno la siri' : 'Onyesha neno la siri'"
+              >
+                <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+              </button>
+            </div>
+            <small v-if="fieldErrors.password" class="field-error">
+              <i class="fas fa-exclamation-circle"></i> {{ fieldErrors.password }}
+            </small>
+          </div>
+
+          <!-- Confirm Password -->
+          <div class="form-group">
+            <label for="password_confirmation">
+              Rudia Neno la Siri <span v-if="!isEditing">*</span>
+            </label>
+            <div class="input-with-icon">
+              <span class="input-prefix"><i class="fas fa-lock"></i></span>
+              <input
+                id="password_confirmation"
+                :type="showPassword ? 'text' : 'password'"
+                class="form-control"
+                v-model="form.password_confirmation"
+                :placeholder="isEditing ? 'Rudia neno jipya' : 'Rudia neno la siri'"
+                minlength="6"
+                autocomplete="new-password"
+              />
+            </div>
+          </div>
+
+          <!-- Active toggle -->
+          <div class="form-group">
+            <label class="switch-row">
+              <input type="checkbox" v-model="form.is_active" />
+              <span class="switch"></span>
+              <span class="switch-label">Mtumiaji anaweza kuingia (Hai)</span>
+            </label>
+          </div>
+
+          <!-- Global error -->
+          <p v-if="modalError" class="msg error-msg">
+            <i class="fas fa-exclamation-circle"></i> {{ modalError }}
+          </p>
+
+          <!-- Actions -->
+          <div class="modal-actions">
+            <button type="button" class="btn-cancel" @click="closeModal">Ghairi</button>
+            <button type="submit" class="btn-save" :disabled="!canSave || userStore.submitting">
+              <i v-if="userStore.submitting" class="fas fa-spinner fa-spin"></i>
+              <i v-else class="fas" :class="isEditing ? 'fa-check' : 'fa-save'"></i>
+              {{ userStore.submitting ? 'Inatuma...' : isEditing ? 'Sasisha' : 'Hifadhi' }}
             </button>
           </div>
         </form>
       </div>
     </div>
-
-    <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteModal" class="modal-overlay" @click="closeDeleteModal">
-      <div class="modal-content delete-modal" @click.stop>
-        <div class="modal-header">
-          <div class="modal-icon warning">
-            <i class="fas fa-exclamation-triangle"></i>
-          </div>
-          <h3>Futa Mtumiaji</h3>
-          <button class="close-btn" @click="closeDeleteModal">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <div class="modal-body">
-          <p>Una uhakika unataka kumfuta mtumiaji huyu?</p>
-          <p class="warning-text" v-if="userToDelete">
-            <strong>{{ userToDelete.first_name }} {{ userToDelete.last_name }}</strong>
-            <br />
-            <span class="text-muted">({{ userToDelete.email }})</span>
-          </p>
-          <p class="warning-note">
-            <i class="fas fa-info-circle"></i>
-            Hatua hii haiwezi kutenguliwa. Mtumiaji atafutwa kabisa kwenye mfumo.
-          </p>
-        </div>
-        <div class="modal-footer">
-          <button @click="closeDeleteModal" class="btn-secondary">
-            <i class="fas fa-times"></i>
-            Ghairi
-          </button>
-          <button @click="deleteUser" class="btn-danger" :disabled="deleteLoading">
-            <span v-if="deleteLoading" class="spinner"></span>
-            <span v-else>
-              <i class="fas fa-trash-alt"></i>
-              Futa Mtumiaji
-            </span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Reset Password Modal -->
-    <div v-if="showResetPasswordModal" class="modal-overlay" @click="closeResetPasswordModal">
-      <div class="modal-content reset-password-modal" @click.stop>
-        <div class="modal-header">
-          <div class="modal-icon info">
-            <i class="fas fa-key"></i>
-          </div>
-          <h3>Weka Nenosiri Mpya</h3>
-          <button class="close-btn" @click="closeResetPasswordModal">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <div class="modal-body">
-          <p>Unaweka nenosiri mpya kwa mtumiaji:</p>
-          <p class="warning-text" v-if="userToReset">
-            <strong>{{ userToReset.first_name }} {{ userToReset.last_name }}</strong>
-          </p>
-          <div class="form-group">
-            <label>Nenosiri Mpya</label>
-            <input
-              type="password"
-              v-model="newPassword"
-              class="form-control"
-              placeholder="Weka nenosiri mpya"
-            />
-          </div>
-          <div class="form-group">
-            <label>Rudia Nenosiri</label>
-            <input
-              type="password"
-              v-model="confirmPassword"
-              class="form-control"
-              placeholder="Rudia nenosiri mpya"
-            />
-          </div>
-          <p class="warning-note">
-            <i class="fas fa-info-circle"></i>
-            Mtumiaji atalazimika kutumia nenosiri hili kuingia kwenye mfumo.
-          </p>
-        </div>
-        <div class="modal-footer">
-          <button @click="closeResetPasswordModal" class="btn-secondary">
-            <i class="fas fa-times"></i>
-            Ghairi
-          </button>
-          <button @click="resetPassword" class="btn-primary" :disabled="resetLoading">
-            <span v-if="resetLoading" class="spinner"></span>
-            <span v-else>
-              <i class="fas fa-save"></i>
-              Hifadhi Nenosiri
-            </span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Bulk Delete Confirmation Modal -->
-    <div v-if="showBulkDeleteModal" class="modal-overlay" @click="closeBulkDeleteModal">
-      <div class="modal-content delete-modal" @click.stop>
-        <div class="modal-header">
-          <div class="modal-icon warning">
-            <i class="fas fa-exclamation-triangle"></i>
-          </div>
-          <h3>Futa Watumiaji Wengi</h3>
-          <button class="close-btn" @click="closeBulkDeleteModal">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <div class="modal-body">
-          <p>
-            Una uhakika unataka kufuta watumiaji
-            <strong>{{ formatNumber(selectedUsers.length) }}</strong
-            >?
-          </p>
-          <div class="selected-list">
-            <div v-for="id in selectedUsers.slice(0, 5)" :key="id" class="selected-item">
-              <i class="fas fa-user"></i>
-              <span>{{ getUserName(id) }}</span>
-            </div>
-            <div v-if="selectedUsers.length > 5" class="more-items">
-              ... na wengine {{ formatNumber(selectedUsers.length - 5) }}
-            </div>
-          </div>
-          <p class="warning-note">
-            <i class="fas fa-info-circle"></i>
-            Hatua hii haiwezi kutenguliwa. Watumiaji watafutwa kabisa kwenye mfumo.
-          </p>
-        </div>
-        <div class="modal-footer">
-          <button @click="closeBulkDeleteModal" class="btn-secondary">
-            <i class="fas fa-times"></i>
-            Ghairi
-          </button>
-          <button @click="bulkDelete" class="btn-danger" :disabled="deleteLoading">
-            <span v-if="deleteLoading" class="spinner"></span>
-            <span v-else>
-              <i class="fas fa-trash-alt"></i>
-              Futa Wote
-            </span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Toast Notification -->
-    <div v-if="showToast" class="toast-notification" :class="toastType">
-      <i :class="toastIcon"></i>
-      <span>{{ toastMessage }}</span>
-    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
-import { formatCurrency, formatDate, formatTime } from '@/utils/formatters'
-import debounce from 'lodash/debounce'
+import { useAuthStore } from '@/stores/auth'
+import { formatNumber } from '@/utils/formatters'
 
-const router = useRouter()
 const userStore = useUserStore()
+const authStore = useAuthStore()
 
-// Helper functions
-const formatNumber = (num) => {
-  if (!num && num !== 0) return '0'
-  return new Intl.NumberFormat('sw-TZ').format(num)
-}
-
-const defaultAvatar = ref('/default-avatar.png')
-
-// State
-const users = ref([])
-const loading = ref(false)
-const error = ref(null)
-const selectedUsers = ref([])
-const selectAll = ref(false)
-const showBulkDeleteModal = ref(false)
-const showToast = ref(false)
-const toastMessage = ref('')
-const toastType = ref('success')
-const activeActionMenu = ref(null)
-
-// Delete user state
-const userToDelete = ref(null)
-const showDeleteModal = ref(false)
-const deleteLoading = ref(false)
-
-// Reset password state
-const userToReset = ref(null)
-const showResetPasswordModal = ref(false)
-const newPassword = ref('')
-const confirmPassword = ref('')
-const resetLoading = ref(false)
-
-// Register user state
-const showRegisterModal = ref(false)
-const registerLoading = ref(false)
+/* ---------- State ---------- */
+const showModal = ref(false)
 const showPassword = ref(false)
-const showConfirmPassword = ref(false)
-const profilePhotoPreview = ref(null)
-const profilePhotoFile = ref(null)
-const profilePhotoInput = ref(null)
+const isEditing = ref(false)
+const editingId = ref(null)
+const modalError = ref('')
+const fieldErrors = ref({})
 
-const registerForm = reactive({
+const emptyForm = () => ({
   first_name: '',
   last_name: '',
   email: '',
   phone: '',
-  username: '',
-  role: '',
+  position: '',
+  role: 'collector',
   password: '',
   password_confirmation: '',
+  is_active: true,
 })
 
-const errors = reactive({
-  first_name: '',
-  last_name: '',
-  email: '',
-  password: '',
-})
+const form = ref(emptyForm())
 
-const filters = reactive({
-  search: '',
-  role: '',
-  status: '',
-  sortBy: 'created_at',
-  sortOrder: 'desc',
-  perPage: 10,
-  page: 1,
-})
-
-const pagination = reactive({
-  currentPage: 1,
-  lastPage: 1,
-  perPage: 10,
-  total: 0,
-  from: 0,
-  to: 0,
-})
-
-const statistics = ref({
-  total: 0,
-  active: 0,
-  admins: 0,
-  recent: 0,
-})
-
-// Computed
-const hasActiveFilters = computed(() => {
-  return filters.search || filters.role || filters.status
-})
-
-const paginationPages = computed(() => {
-  const pages = []
-  const maxVisible = 5
-  let start = Math.max(1, pagination.currentPage - Math.floor(maxVisible / 2))
-  let end = Math.min(pagination.lastPage, start + maxVisible - 1)
-
-  if (end - start + 1 < maxVisible) {
-    start = Math.max(1, end - maxVisible + 1)
-  }
-
-  for (let i = start; i <= end; i++) {
-    pages.push(i)
-  }
-
-  return pages
-})
-
-const toastIcon = computed(() => {
-  return toastType.value === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'
-})
-
-// Methods
-const loadUsers = async () => {
-  loading.value = true
-  error.value = null
-
-  try {
-    const params = {
-      search: filters.search || undefined,
-      role: filters.role || undefined,
-      status: filters.status || undefined,
-      sort_by: filters.sortBy,
-      sort_order: filters.sortOrder,
-      per_page: filters.perPage,
-      page: filters.page,
-    }
-
-    const response = await userStore.fetchUsers(params)
-
-    let responseData = null
-
-    if (response && response.success && response.data) {
-      responseData = response.data
-    } else if (response && response.data) {
-      responseData = response.data
-    } else {
-      responseData = response
-    }
-
-    if (responseData) {
-      if (responseData.data && Array.isArray(responseData.data)) {
-        users.value = responseData.data
-      } else if (Array.isArray(responseData)) {
-        users.value = responseData
-      } else {
-        users.value = []
-      }
-
-      pagination.currentPage =
-        responseData.current_page || responseData.currentPage || filters.page || 1
-      pagination.lastPage = responseData.last_page || responseData.lastPage || 1
-      pagination.perPage = responseData.per_page || responseData.perPage || filters.perPage || 10
-      pagination.total = responseData.total || 0
-      pagination.from = responseData.from || 0
-      pagination.to = responseData.to || 0
-
-      if (pagination.total === 0 && users.value.length > 0) {
-        pagination.total = users.value.length
-        pagination.lastPage = Math.ceil(pagination.total / pagination.perPage)
-        pagination.from = (pagination.currentPage - 1) * pagination.perPage + 1
-        pagination.to = Math.min(pagination.currentPage * pagination.perPage, pagination.total)
-      }
-    } else {
-      users.value = []
-    }
-
-    await loadStatistics()
-  } catch (err) {
-    console.error('Error loading users:', err)
-    error.value =
-      err.response?.data?.message || 'Imeshindwa kupakia watumiaji. Tafadhali jaribu tena.'
-    showToastMessage(error.value, 'error')
-  } finally {
-    loading.value = false
-  }
-}
-
-const changePerPage = () => {
-  filters.page = 1
-  loadUsers()
-}
-
-const getUserProfilePhoto = (user) => {
-  if (!user) return defaultAvatar.value
-  if (user.profile_photo_url) return user.profile_photo_url
-  if (user.profile_photo) {
-    // const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
-    const baseUrl = import.meta.env.VITE_API_URL || 'https://web.bas.co.tz/api/v1'
-
-    return `${baseUrl}/storage/${user.profile_photo}`
-  }
-  return defaultAvatar.value
-}
-
-const loadStatistics = async () => {
-  try {
-    const activeCount = users.value.filter((u) => u.status === 'active').length
-    const adminsCount = users.value.filter((u) => u.role === 'admin').length
-
-    const weekAgo = new Date()
-    weekAgo.setDate(weekAgo.getDate() - 7)
-    const recentCount = users.value.filter((u) => new Date(u.created_at) >= weekAgo).length
-
-    statistics.value = {
-      total: pagination.total || users.value.length,
-      active: activeCount,
-      admins: adminsCount,
-      recent: recentCount,
-    }
-  } catch (err) {
-    console.error('Error loading statistics:', err)
-  }
-}
-
-const debouncedSearch = debounce(() => {
-  filters.page = 1
-  loadUsers()
-}, 500)
-
-watch(
-  () => filters.search,
-  () => {
-    debouncedSearch()
-  },
+/* ---------- Computed ---------- */
+const users = computed(() => userStore.users ?? [])
+const currentUserId = computed(() => authStore.user?.id)
+const activeCount = computed(() => users.value.filter((u) => u.is_active).length)
+const adminCount = computed(() => users.value.filter((u) => u.role === 'admin').length)
+const withPhoneCount = computed(
+  () => users.value.filter((u) => u.phone && String(u.phone).trim()).length,
 )
 
-const clearSearch = () => {
-  filters.search = ''
-  filters.page = 1
-  loadUsers()
-}
+const canSave = computed(() => {
+  const f = form.value
+  const phoneOk = /^(\+?255|0)\d{9}$/.test(f.phone.replace(/\s/g, ''))
 
-const clearFilter = (filter) => {
-  filters[filter] = ''
-  filters.page = 1
-  loadUsers()
-}
+  /* Password rules: required on create, optional on edit */
+  const passwordOk = isEditing.value
+    ? f.password === '' || f.password.length >= 6
+    : f.password.length >= 6
 
-const clearAllFilters = () => {
-  filters.search = ''
-  filters.role = ''
-  filters.status = ''
-  filters.sortBy = 'created_at'
-  filters.sortOrder = 'desc'
-  filters.perPage = 10
-  filters.page = 1
-  loadUsers()
-}
+  const matchOk = f.password === f.password_confirmation
 
-const changePage = (page) => {
-  if (page >= 1 && page <= pagination.lastPage) {
-    filters.page = page
-    loadUsers()
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+  return (
+    !!f.first_name.trim() &&
+    !!f.last_name.trim() &&
+    !!f.email.trim() &&
+    !!f.position.trim() &&
+    !!f.role &&
+    phoneOk &&
+    passwordOk &&
+    matchOk
+  )
+})
+
+/* ---------- Load ---------- */
+onMounted(async () => {
+  try {
+    await userStore.fetchUsers()
+  } catch (err) {
+    console.error('fetchUsers error:', err)
   }
-}
+})
 
-const getRoleText = (role) => {
-  const roleMap = {
-    admin: 'Admin',
+/* ---------- Helpers ---------- */
+const roleLabel = (role) => {
+  const map = {
+    admin: 'Msimamizi Mkuu',
     manager: 'Meneja',
-    officer: 'Afisa Mikopo',
-    cashier: 'Keshia',
+    collector: 'Mkusanyaji',
     viewer: 'Mtazamaji',
   }
-  return roleMap[role] || role
+  return map[role] || role || '—'
 }
 
-const getRoleIcon = (role) => {
-  const iconMap = {
-    admin: 'fas fa-crown',
-    manager: 'fas fa-chart-line',
-    officer: 'fas fa-hand-holding-usd',
-    cashier: 'fas fa-money-bill-wave',
-    viewer: 'fas fa-eye',
+const fullName = (u) => {
+  const f = `${u.first_name || ''} ${u.last_name || ''}`.trim()
+  return f || u.name || '—'
+}
+
+const avatarFor = (u) => {
+  const first = (u.first_name || u.name || '').charAt(0)
+  const last = (u.last_name || '').charAt(0)
+  const initials = (first + last).toUpperCase() || 'U'
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=1e88e5&color=fff&size=64&bold=true`
+}
+
+const formatPhone = (phone) => {
+  if (!phone) return ''
+  let digits = String(phone).replace(/\D/g, '')
+  if (digits.startsWith('255')) digits = '0' + digits.slice(3)
+  if (digits.length === 10) {
+    return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`
   }
-  return iconMap[role] || 'fas fa-user'
+  return phone
 }
 
-const getStatusText = (status) => {
-  const statusMap = {
-    active: 'Anafanya kazi',
-    inactive: 'Hafanyi kazi',
-    suspended: 'Amesimamishwa',
-  }
-  return statusMap[status] || status
+/* ---------- Modal ---------- */
+const resetFormState = () => {
+  form.value = emptyForm()
+  modalError.value = ''
+  fieldErrors.value = {}
+  showPassword.value = false
+  isEditing.value = false
+  editingId.value = null
 }
 
-const getUserName = (id) => {
-  const user = users.value.find((u) => u.id === id)
-  return user ? `${user.first_name} ${user.last_name}` : ''
+const openCreate = () => {
+  resetFormState()
+  showModal.value = true
 }
 
-// Action Menu methods
-const toggleActionMenu = (userId) => {
-  if (activeActionMenu.value === userId) {
-    activeActionMenu.value = null
-  } else {
-    activeActionMenu.value = userId
-  }
-}
+const openEdit = (user) => {
+  resetFormState()
+  isEditing.value = true
+  editingId.value = user.id
 
-const closeActionMenu = () => {
-  activeActionMenu.value = null
-}
-
-const handleClickOutside = (event) => {
-  if (!event.target.closest('.action-dropdown')) {
-    closeActionMenu()
-  }
-}
-
-// Selection methods
-const toggleSelectAll = () => {
-  if (selectAll.value) {
-    selectedUsers.value = users.value.map((u) => u.id)
-  } else {
-    selectedUsers.value = []
-  }
-}
-
-const updateSelectAll = () => {
-  selectAll.value = selectedUsers.value.length === users.value.length
-}
-
-const clearSelection = () => {
-  selectedUsers.value = []
-  selectAll.value = false
-}
-
-// Register User Methods
-const openRegisterModal = () => {
-  showRegisterModal.value = true
-  // Reset form
-  registerForm.first_name = ''
-  registerForm.last_name = ''
-  registerForm.email = ''
-  registerForm.phone = ''
-  registerForm.username = ''
-  registerForm.role = ''
-  registerForm.password = ''
-  registerForm.password_confirmation = ''
-  errors.first_name = ''
-  errors.last_name = ''
-  errors.email = ''
-  errors.password = ''
-  profilePhotoPreview.value = null
-  profilePhotoFile.value = null
-}
-
-const closeRegisterModal = () => {
-  showRegisterModal.value = false
-}
-
-const togglePasswordVisibility = () => {
-  showPassword.value = !showPassword.value
-}
-
-const toggleConfirmPasswordVisibility = () => {
-  showConfirmPassword.value = !showConfirmPassword.value
-}
-
-const triggerFileInput = () => {
-  profilePhotoInput.value.click()
-}
-
-const handleProfilePhoto = (event) => {
-  const file = event.target.files[0]
-  if (file) {
-    if (file.size > 2 * 1024 * 1024) {
-      showToastMessage('Picha inazidi 2MB. Tafadhali chagua picha ndogo.', 'error')
-      return
-    }
-
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif']
-    if (!allowedTypes.includes(file.type)) {
-      showToastMessage('Tafadhali chagua picha ya aina ya JPEG, PNG, au GIF', 'error')
-      return
-    }
-
-    profilePhotoFile.value = file
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      profilePhotoPreview.value = e.target.result
-    }
-    reader.readAsDataURL(file)
-  }
-}
-
-const removeProfilePhoto = () => {
-  profilePhotoPreview.value = null
-  profilePhotoFile.value = null
-  if (profilePhotoInput.value) {
-    profilePhotoInput.value.value = ''
-  }
-}
-
-const registerUser = async () => {
-  // Clear previous errors
-  Object.keys(errors).forEach((key) => (errors[key] = ''))
-
-  // Validation
-  let hasError = false
-
-  if (!registerForm.first_name) {
-    errors.first_name = 'Jina la kwanza linahitajika'
-    hasError = true
+  form.value = {
+    first_name: user.first_name || '',
+    last_name: user.last_name || '',
+    email: user.email || '',
+    phone: user.phone || '',
+    position: user.position || '',
+    role: user.role || 'collector',
+    password: '',
+    password_confirmation: '',
+    is_active: user.is_active !== undefined ? !!user.is_active : true,
   }
 
-  if (!registerForm.last_name) {
-    errors.last_name = 'Jina la mwisho linahitajika'
-    hasError = true
+  showModal.value = true
+}
+
+const closeModal = () => {
+  showModal.value = false
+  resetFormState()
+}
+
+/* ---------- Submit (create or update) ---------- */
+const handleSubmit = async () => {
+  if (!canSave.value) return
+
+  modalError.value = ''
+  fieldErrors.value = {}
+
+  /* Build payload */
+  const payload = {
+    first_name: form.value.first_name.trim(),
+    last_name: form.value.last_name.trim(),
+    email: form.value.email.trim(),
+    phone: form.value.phone.trim(),
+    position: form.value.position.trim(),
+    role: form.value.role,
+    is_active: form.value.is_active,
   }
 
-  if (!registerForm.email) {
-    errors.email = 'Barua pepe inahitajika'
-    hasError = true
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerForm.email)) {
-    errors.email = 'Barua pepe si sahihi'
-    hasError = true
+  /* Only include password if it has been filled */
+  if (form.value.password) {
+    payload.password = form.value.password
+    payload.password_confirmation = form.value.password_confirmation
   }
-
-  if (!registerForm.password) {
-    errors.password = 'Nenosiri linahitajika'
-    hasError = true
-  } else if (registerForm.password.length < 6) {
-    errors.password = 'Nenosiri lazima iwe na herufi 6 au zaidi'
-    hasError = true
-  } else if (registerForm.password !== registerForm.password_confirmation) {
-    errors.password = 'Manenosiri hayafanani'
-    hasError = true
-  }
-
-  if (hasError) return
-
-  registerLoading.value = true
 
   try {
-    const formData = new FormData()
-    formData.append('first_name', registerForm.first_name)
-    formData.append('last_name', registerForm.last_name)
-    formData.append('email', registerForm.email)
-    if (registerForm.phone) formData.append('phone', registerForm.phone)
-    if (registerForm.username) formData.append('username', registerForm.username)
-    formData.append('role', registerForm.role)
-    formData.append('password', registerForm.password)
-    if (profilePhotoFile.value) formData.append('profile_photo', profilePhotoFile.value)
-
-    const response = await userStore.createUser(formData)
-
-    if (response.success) {
-      showToastMessage('Mtumiaji amesajiliwa kwa mafanikio', 'success')
-      closeRegisterModal()
-      await loadUsers()
+    if (isEditing.value) {
+      await userStore.updateUser(editingId.value, payload)
     } else {
-      throw new Error(response.message || 'Failed to register user')
+      await userStore.createUser(payload)
     }
-  } catch (error) {
-    console.error('Register error:', error)
+    closeModal()
+  } catch (err) {
+    /* Extract field errors from the API */
+    fieldErrors.value = err?.fieldErrors || {}
 
-    if (error.response?.data?.errors) {
-      const validationErrors = error.response.data.errors
-      if (validationErrors.email) errors.email = validationErrors.email[0]
-      if (validationErrors.password) errors.password = validationErrors.password[0]
-      if (validationErrors.first_name) errors.first_name = validationErrors.first_name[0]
-      if (validationErrors.last_name) errors.last_name = validationErrors.last_name[0]
-    } else if (error.response?.data?.message) {
-      showToastMessage(error.response.data.message, 'error')
-    } else {
-      showToastMessage('Imeshindwa kusajili mtumiaji. Tafadhali jaribu tena.', 'error')
-    }
-  } finally {
-    registerLoading.value = false
+    /* Show a top-level message */
+    modalError.value =
+      err?.response?.data?.message ||
+      userStore.error ||
+      (isEditing.value ? 'Imeshindwa kusasisha mtumiaji.' : 'Imeshindwa kuongeza mtumiaji.')
   }
 }
 
-// Reset password
-const resetUserPassword = (user) => {
-  userToReset.value = user
-  newPassword.value = ''
-  confirmPassword.value = ''
-  showResetPasswordModal.value = true
-  closeActionMenu()
-}
-
-const closeResetPasswordModal = () => {
-  showResetPasswordModal.value = false
-  userToReset.value = null
-  newPassword.value = ''
-  confirmPassword.value = ''
-}
-
-const resetPassword = async () => {
-  if (!newPassword.value) {
-    showToastMessage('Tafadhali weka nenosiri mpya', 'error')
+/* ---------- Delete ---------- */
+const confirmDelete = async (user) => {
+  if (user.id === currentUserId.value) {
+    alert('Hauwezi kufuta akaunti yako mwenyewe.')
     return
   }
-
-  if (newPassword.value !== confirmPassword.value) {
-    showToastMessage('Nenosiri na rudia nenosiri hazifanani', 'error')
-    return
-  }
-
-  if (newPassword.value.length < 6) {
-    showToastMessage('Nenosiri lazima iwe na herufi 6 au zaidi', 'error')
-    return
-  }
-
-  resetLoading.value = true
+  if (!confirm(`Futa mtumiaji "${fullName(user)}"?`)) return
 
   try {
-    await userStore.resetPassword(userToReset.value.id, newPassword.value)
-    showToastMessage('Nenosiri limewekwa kwa mafanikio', 'success')
-    closeResetPasswordModal()
-  } catch (error) {
-    const errorMessage = error.response?.data?.message || 'Imeshindwa kuweka nenosiri'
-    showToastMessage(errorMessage, 'error')
-  } finally {
-    resetLoading.value = false
+    await userStore.deleteUser(user.id)
+  } catch (err) {
+    alert(err?.message || 'Imeshindwa kufuta mtumiaji.')
   }
 }
-
-// Toggle user status
-const toggleUserStatus = async (user) => {
-  const newStatus = user.status === 'active' ? 'inactive' : 'active'
-  const action = user.status === 'active' ? 'kumzuia' : 'kumwezesha'
-
-  if (confirm(`Una uhakika unataka ${action} mtumiaji huyu?`)) {
-    try {
-      await userStore.updateUserStatus(user.id, newStatus)
-      user.status = newStatus
-      showToastMessage(`Mtumiaji ame${action}wa kwa mafanikio`, 'success')
-      await loadStatistics()
-      closeActionMenu()
-    } catch (error) {
-      const errorMessage =
-        error.response?.data?.message || 'Hitilafu imetokea. Tafadhali jaribu tena.'
-      showToastMessage(errorMessage, 'error')
-    }
-  }
-}
-
-// Delete user
-const confirmDelete = (user) => {
-  userToDelete.value = user
-  showDeleteModal.value = true
-  closeActionMenu()
-}
-
-const closeDeleteModal = () => {
-  showDeleteModal.value = false
-  userToDelete.value = null
-}
-
-const deleteUser = async () => {
-  if (!userToDelete.value) return
-
-  deleteLoading.value = true
-
-  try {
-    const result = await userStore.deleteUser(userToDelete.value.id)
-
-    if (result && (result.success || result.status === 'success')) {
-      showToastMessage('Mtumiaji amefutwa kwa mafanikio', 'success')
-      closeDeleteModal()
-      await loadUsers()
-      clearSelection()
-    } else {
-      throw new Error(result?.message || 'Failed to delete user')
-    }
-  } catch (error) {
-    console.error('Delete error:', error)
-
-    let errorMessage = 'Hitilafu imetokea wakati wa kufuta'
-
-    if (error.response) {
-      const responseData = error.response.data
-
-      if (responseData.message) {
-        errorMessage = responseData.message
-      } else if (responseData.error) {
-        errorMessage = responseData.error
-      }
-
-      if (error.response.status === 403) {
-        errorMessage = 'Hauna ruhusa ya kufuta mtumiaji huyu'
-      } else if (error.response.status === 404) {
-        errorMessage = 'Mtumiaji hakupatikana'
-      }
-    } else if (error.request) {
-      errorMessage =
-        'Hakuna majibu kutoka kwa server. Tafadhali hakikisha una muunganiko wa intaneti.'
-    } else if (error.message) {
-      errorMessage = error.message
-    }
-
-    showToastMessage(errorMessage, 'error')
-  } finally {
-    deleteLoading.value = false
-  }
-}
-
-// Bulk actions
-const bulkActivate = async () => {
-  if (selectedUsers.value.length === 0) {
-    showToastMessage('Tafadhali chagua watumiaji wa kuwasha', 'warning')
-    return
-  }
-
-  try {
-    await Promise.all(selectedUsers.value.map((id) => userStore.updateUserStatus(id, 'active')))
-    showToastMessage(`Watumiaji ${selectedUsers.value.length} wamewashwa kwa mafanikio`, 'success')
-    await loadUsers()
-    clearSelection()
-  } catch (error) {
-    const errorMessage =
-      error.response?.data?.message || 'Hitilafu imetokea wakati wa kuwasha watumiaji'
-    showToastMessage(errorMessage, 'error')
-  }
-}
-
-const bulkDeactivate = async () => {
-  if (selectedUsers.value.length === 0) {
-    showToastMessage('Tafadhali chagua watumiaji wa kuzima', 'warning')
-    return
-  }
-
-  try {
-    await Promise.all(selectedUsers.value.map((id) => userStore.updateUserStatus(id, 'inactive')))
-    showToastMessage(`Watumiaji ${selectedUsers.value.length} wamezimwa kwa mafanikio`, 'success')
-    await loadUsers()
-    clearSelection()
-  } catch (error) {
-    const errorMessage =
-      error.response?.data?.message || 'Hitilafu imetokea wakati wa kuzima watumiaji'
-    showToastMessage(errorMessage, 'error')
-  }
-}
-
-const confirmBulkDelete = () => {
-  if (selectedUsers.value.length === 0) {
-    showToastMessage('Tafadhali chagua watumiaji wa kufuta', 'warning')
-    return
-  }
-  showBulkDeleteModal.value = true
-}
-
-const closeBulkDeleteModal = () => {
-  showBulkDeleteModal.value = false
-}
-
-const bulkDelete = async () => {
-  if (selectedUsers.value.length === 0) return
-
-  deleteLoading.value = true
-
-  try {
-    const results = await Promise.allSettled(
-      selectedUsers.value.map((id) => userStore.deleteUser(id)),
-    )
-
-    const successful = results.filter(
-      (r) => r.status === 'fulfilled' && (r.value?.success || r.value?.status === 'success'),
-    ).length
-    const failed = results.length - successful
-
-    if (successful > 0) {
-      showToastMessage(
-        `${successful} watumiaji wamefutwa kwa mafanikio${failed > 0 ? `, ${failed} wameshindwa` : ''}`,
-        successful > 0 ? 'success' : 'error',
-      )
-    } else {
-      showToastMessage('Imeshindwa kufuta watumiaji waliopangwa', 'error')
-    }
-
-    closeBulkDeleteModal()
-    await loadUsers()
-    clearSelection()
-  } catch (error) {
-    const errorMessage =
-      error.response?.data?.message || 'Hitilafu imetokea wakati wa kufuta watumiaji'
-    showToastMessage(errorMessage, 'error')
-  } finally {
-    deleteLoading.value = false
-  }
-}
-
-// Export/Import
-const exportUsers = async () => {
-  try {
-    showToastMessage('Watumiaji wanapakuliwa...', 'info')
-    if (userStore.exportUsers) {
-      await userStore.exportUsers(filters)
-      showToastMessage('Watumiaji wamepakuliwa kwa mafanikio', 'success')
-    } else {
-      showToastMessage('Kipengele cha kuweka nje hakipo', 'warning')
-    }
-  } catch (error) {
-    const errorMessage = error.response?.data?.message || 'Hitilafu wakati wa kupakua'
-    showToastMessage(errorMessage, 'error')
-  }
-}
-
-const importUsers = () => {
-  const input = document.createElement('input')
-  input.type = 'file'
-  input.accept = '.csv,.xlsx,.xls'
-  input.onchange = async (e) => {
-    const file = e.target.files[0]
-    if (file) {
-      try {
-        if (userStore.importUsers) {
-          await userStore.importUsers(file)
-          showToastMessage('Watumiaji wameingizwa kwa mafanikio', 'success')
-          await loadUsers()
-        } else {
-          showToastMessage('Kipengele cha kuingiza nje hakipo', 'warning')
-        }
-      } catch (error) {
-        const errorMessage = error.response?.data?.message || 'Hitilafu wakati wa kuingiza'
-        showToastMessage(errorMessage, 'error')
-      }
-    }
-  }
-  input.click()
-}
-
-// Toast methods
-const showToastMessage = (message, type = 'success') => {
-  toastMessage.value = message
-  toastType.value = type
-  showToast.value = true
-
-  setTimeout(() => {
-    showToast.value = false
-  }, 3000)
-}
-
-// Lifecycle
-onMounted(() => {
-  loadUsers()
-  document.addEventListener('click', handleClickOutside)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-  debouncedSearch.cancel()
-})
 </script>
 
 <style scoped>
-.users-list-container {
-  padding: 5px 10px;
-  max-width: 1400px;
+/* ... existing styles ... */
+
+/* ADD: action group for edit + delete buttons */
+.action-group {
+  display: inline-flex;
+  gap: 0.35rem;
+  justify-content: center;
+}
+
+/* ADD: edit button variant */
+.btn-icon.edit {
+  background: #e3f2fd;
+  color: #0d47a1;
+}
+.btn-icon.edit:hover {
+  background: #1e88e5;
+  color: #fff;
+}
+
+/* ADD: field-level error */
+.field-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: #c62828;
+  margin-top: 0.15rem;
+}
+.field-error i {
+  font-size: 0.7rem;
+}
+
+/* ADD: has-error state */
+.form-control.has-error,
+.input-with-icon.has-error {
+  border-color: #c62828;
+  background: #fdecea;
+}
+.form-control.has-error:focus,
+.input-with-icon.has-error:focus-within {
+  box-shadow: 0 0 0 4px rgba(198, 40, 40, 0.12);
+}
+
+/* ADD: optional tag */
+.optional-tag {
+  font-size: 0.7rem;
+  color: #8a95a8;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 0.35rem;
+}
+
+.user-page {
+  padding: 1.5rem;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
-/* Page Header */
-.page-header {
+.list-card {
+  background: #ffffff;
+  border-radius: 1.25rem;
+  padding: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+/* Header */
+.list-header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-  gap: 15px;
-}
-
-.header-left h1 {
-  font-size: 1.8rem;
-  color: #1a2639;
-  margin: 0 0 5px;
-  font-weight: 600;
-}
-
-.users-count {
-  color: #666;
-  margin: 0;
-  font-size: 0.9rem;
-}
-
-.header-actions {
-  display: flex;
-  gap: 10px;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
   flex-wrap: wrap;
 }
-
-.btn-primary,
-.btn-export,
-.btn-import {
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  text-decoration: none;
-  transition: all 0.3s;
-  border: none;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #3498db, #2980b9);
-  color: white;
-  box-shadow: 0 2px 5px rgba(52, 152, 219, 0.3);
-}
-
-.btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
-}
-
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-export {
-  background: white;
-  color: #27ae60;
-  border: 1px solid #27ae60;
-}
-
-.btn-export:hover {
-  background: #27ae60;
-  color: white;
-}
-
-.btn-import {
-  background: white;
-  color: #f39c12;
-  border: 1px solid #f39c12;
-}
-
-.btn-import:hover {
-  background: #f39c12;
-  color: white;
-}
-
-/* Filters Card */
-.filters-card {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 25px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  border: 1px solid #eef2f6;
-}
-
-.filters-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr;
-  gap: 15px;
-}
-
-@media (max-width: 1200px) {
-  .filters-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .search-group {
-    grid-column: span 3;
-  }
-}
-
-@media (max-width: 768px) {
-  .filters-grid {
-    grid-template-columns: 1fr;
-  }
-  .search-group {
-    grid-column: span 1;
-  }
-}
-
-.filter-group {
-  display: flex;
-  flex-direction: column;
-}
-
-.filter-group label {
+.header-left {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 0.85rem;
-  color: #666;
-  margin-bottom: 5px;
+  gap: 1rem;
 }
-
-.filter-group label i {
-  color: #3498db;
-  font-size: 0.9rem;
-}
-
-.search-input-wrapper {
-  position: relative;
-  width: 100%;
-}
-
-.search-icon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #999;
-  font-size: 0.9rem;
-  z-index: 1;
-}
-
-.search-input {
-  width: 100%;
-  padding: 10px 35px 10px 35px;
-  border: 2px solid #eef2f6;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  transition: all 0.3s;
-  background: #f8fafc;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: #3498db;
-  background: white;
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-}
-
-.clear-search {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: #999;
-  cursor: pointer;
-  padding: 5px;
-}
-
-.clear-search:hover {
-  color: #e74c3c;
-}
-
-.form-control {
-  width: 100%;
-  padding: 10px 12px;
-  border: 2px solid #eef2f6;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  transition: all 0.3s;
-  background: #f8fafc;
-}
-
-.form-control:focus {
-  outline: none;
-  border-color: #3498db;
-  background: white;
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-}
-
-.form-control.is-invalid {
-  border-color: #e74c3c;
-}
-
-/* Active Filters */
-.active-filters {
-  margin-top: 15px;
-  padding-top: 15px;
-  border-top: 1px solid #eef2f6;
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  flex-wrap: wrap;
-}
-
-.active-filters-label {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: #666;
-  font-size: 0.85rem;
-}
-
-.filter-tags {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  flex: 1;
-}
-
-.filter-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 10px;
-  background: #e3f2fd;
-  color: #1976d2;
-  border-radius: 20px;
-  font-size: 0.85rem;
-}
-
-.remove-filter {
-  cursor: pointer;
-  padding: 2px;
-}
-
-.remove-filter:hover {
-  color: #e74c3c;
-}
-
-.clear-all-btn {
-  background: none;
-  border: none;
-  color: #e74c3c;
-  font-size: 0.85rem;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-}
-
-.clear-all-btn:hover {
-  text-decoration: underline;
-}
-
-/* Statistics Cards */
-.stats-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
-  margin-bottom: 25px;
-}
-
-.stat-card {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  border: 1px solid #eef2f6;
-  transition: all 0.3s;
-}
-
-.stat-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-}
-
-.stat-icon {
-  width: 50px;
-  height: 50px;
-  border-radius: 12px;
+.header-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 1rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  font-size: 1.5rem;
+  font-size: 1.4rem;
+  color: #fff;
+  background: linear-gradient(135deg, #1e88e5, #0d47a1);
+  box-shadow: 0 8px 14px rgba(30, 136, 229, 0.25);
+  flex-shrink: 0;
+}
+.list-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #1a2634;
+}
+.subtitle {
+  margin: 0.15rem 0 0;
+  font-size: 0.85rem;
+  color: #5e6f8d;
 }
 
-.stat-details {
+/* Create button */
+.btn-create {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.25rem;
+  background: linear-gradient(135deg, #1e88e5, #0d47a1);
+  color: #ffffff;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(30, 136, 229, 0.25);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.btn-create:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(30, 136, 229, 0.35);
+}
+
+/* Summary */
+.summary-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+  border-radius: 0.85rem;
+  border: 1px solid rgba(30, 136, 229, 0.2);
+  margin-bottom: 1.25rem;
+}
+.summary-item {
   display: flex;
   flex-direction: column;
+  gap: 0.2rem;
+}
+.summary-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #0d47a1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.summary-value {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #1a2634;
+  letter-spacing: -0.02em;
 }
 
-.stat-value {
-  font-size: 1.5rem;
+/* Table */
+.table-wrap {
+  overflow-x: auto;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+}
+.user-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.user-table th {
+  background: #f8fafc;
+  color: #5e6f8d;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+.user-table td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid #f1f3f8;
+  color: #1a2634;
+  vertical-align: middle;
+}
+.user-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.user-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.cell-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid #e2e8f0;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.user-name {
+  font-weight: 600;
+  color: #1a2634;
+}
+.desc {
+  display: block;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #5e6f8d;
+  font-size: 0.82rem;
+}
+
+/* Phone link */
+.phone-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.6rem;
+  background: #e8f5e9;
+  color: #2e7d32;
+  border-radius: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.phone-link i {
+  font-size: 0.7rem;
+}
+.phone-link:hover {
+  background: #2e7d32;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+/* Position tag */
+.position-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  background: #eef2f7;
+  color: #2c3e66;
+  border-radius: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+.position-tag i {
+  font-size: 0.7rem;
+  color: #5e6f8d;
+}
+
+/* Role badges */
+.role-badge {
+  display: inline-block;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
   font-weight: 700;
-  color: #1a2639;
-  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.role-admin {
+  background: #fdecea;
+  color: #c62828;
+}
+.role-manager {
+  background: #e3f2fd;
+  color: #0d47a1;
+}
+.role-collector {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+.role-viewer {
+  background: #f1f3f8;
+  color: #5e6f8d;
 }
 
-.stat-label {
-  font-size: 0.85rem;
-  color: #666;
+/* Status badge */
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.status-badge.active {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+.status-badge.inactive {
+  background: #f1f3f8;
+  color: #8a95a8;
 }
 
-/* Loading State */
-.loading-state {
+.text-right {
+  text-align: right;
+}
+.text-center {
   text-align: center;
-  padding: 60px 20px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+.muted {
+  color: #b0b8c7;
 }
 
-.spinner {
-  display: inline-block;
-  width: 40px;
-  height: 40px;
-  border: 3px solid #eef2f6;
-  border-top-color: #3498db;
+/* Icon button */
+.btn-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 0.5rem;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 0.85rem;
+}
+.btn-icon.danger {
+  background: #fdecea;
+  color: #c62828;
+}
+.btn-icon.danger:hover:not(:disabled) {
+  background: #c62828;
+  color: #fff;
+}
+.btn-icon:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Inline states */
+.loading-inline,
+.empty-inline,
+.error-inline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 2.5rem 1rem;
+  border-radius: 0.85rem;
+  font-size: 0.95rem;
+  background: #f8fafc;
+  color: #5e6f8d;
+}
+.empty-inline i {
+  font-size: 1.4rem;
+  color: #b0b8c7;
+}
+.error-inline {
+  background: #fdecea;
+  color: #c62828;
+}
+.spinner-sm {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #e2e8f0;
+  border-top-color: #1e88e5;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 15px;
+  animation: spin 0.7s linear infinite;
 }
-
-.spinner-small {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid white;
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
 @keyframes spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-/* Error State */
-.error-state {
-  text-align: center;
-  padding: 60px 20px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.error-state i {
-  font-size: 3rem;
-  color: #e74c3c;
-  margin-bottom: 15px;
-}
-
-.error-state h3 {
-  color: #333;
-  margin-bottom: 10px;
-}
-
-.error-state p {
-  color: #666;
-  margin-bottom: 20px;
-}
-
-.btn-retry {
-  padding: 10px 25px;
-  background: #3498db;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Table Card */
-.table-card {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  border: 1px solid #eef2f6;
-  overflow: hidden;
-}
-
-.table-responsive {
-  overflow-x: auto;
-  margin: -20px;
-  padding: 20px;
-}
-
-.users-table {
-  width: 100%;
-  border-collapse: collapse;
-  white-space: nowrap;
-}
-
-.users-table th {
-  text-align: left;
-  padding: 12px 10px;
-  background: #f8fafc;
-  color: #1a2639;
-  font-weight: 600;
-  font-size: 0.85rem;
-  border-bottom: 2px solid #eef2f6;
-}
-
-.users-table td {
-  padding: 12px 10px;
-  border-bottom: 1px solid #eef2f6;
-  color: #666;
-  font-size: 0.85rem;
-}
-
-.checkbox-col {
-  width: 40px;
-  text-align: center;
-}
-
-.users-table tbody tr:hover {
-  background: #f8fafc;
-}
-
-.users-table tbody tr.row-selected {
-  background: #e3f2fd;
-}
-
-/* User Cell */
-.user-cell {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.user-avatar-wrapper {
-  position: relative;
-}
-
-.user-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #eef2f6;
-}
-
-.status-indicator {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 2px solid white;
-}
-
-.status-indicator.active {
-  background: #27ae60;
-}
-
-.status-indicator.inactive {
-  background: #f39c12;
-}
-
-.status-indicator.suspended {
-  background: #e74c3c;
-}
-
-.user-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.user-name {
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 2px;
-}
-
-.user-username {
-  font-size: 0.75rem;
-  color: #999;
-}
-
-/* Contact Info */
-.contact-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.contact-item {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.85rem;
-}
-
-.contact-item i {
-  width: 16px;
-  color: #3498db;
-  font-size: 0.8rem;
-}
-
-/* Role Badge */
-.role-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.role-badge.admin {
-  background: #e74c3c;
-  color: white;
-}
-
-.role-badge.manager {
-  background: #3498db;
-  color: white;
-}
-
-.role-badge.officer {
-  background: #27ae60;
-  color: white;
-}
-
-.role-badge.cashier {
-  background: #f39c12;
-  color: white;
-}
-
-.role-badge.viewer {
-  background: #95a5a6;
-  color: white;
-}
-
-/* Status Badge */
-.status-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.status-badge.active {
-  background: #d4edda;
-  color: #155724;
-}
-
-.status-badge.inactive {
-  background: #fff3cd;
-  color: #856404;
-}
-
-.status-badge.suspended {
-  background: #f8d7da;
-  color: #721c24;
-}
-
-/* Date & Login Info */
-.date-info,
-.login-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.date,
-.login-date {
-  font-size: 0.85rem;
-  color: #333;
-}
-
-.time,
-.login-time {
-  font-size: 0.7rem;
-  color: #999;
-}
-
-.text-muted {
-  color: #999;
-  font-size: 0.8rem;
-}
-
-/* Action Dropdown */
-.action-dropdown {
-  position: relative;
-  display: inline-block;
-}
-
-.action-menu-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  border: 1px solid #eef2f6;
-  background: white;
-  color: #666;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s;
-}
-
-.action-menu-btn:hover {
-  background: #f8fafc;
-  color: #3498db;
-  border-color: #3498db;
-}
-
-.action-menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  width: 200px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
-  margin-top: 5px;
-  z-index: 1000;
-  overflow: hidden;
-}
-
-.action-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 15px;
-  color: #333;
-  text-decoration: none;
-  transition: background 0.3s;
-  width: 100%;
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 0.85rem;
-  text-align: left;
-}
-
-.action-menu-item:hover {
-  background: #f8fafc;
-}
-
-.action-menu-item i {
-  width: 18px;
-  color: #666;
-}
-
-.action-menu-item.text-danger {
-  color: #e74c3c;
-}
-
-.action-menu-item.text-danger i {
-  color: #e74c3c;
-}
-
-/* Bulk Actions */
-.bulk-actions {
-  margin-top: 20px;
-  padding: 15px;
-  background: #e3f2fd;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 15px;
-}
-
-.bulk-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #1976d2;
-}
-
-.bulk-info i {
-  font-size: 1.1rem;
-}
-
-.bulk-buttons {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.btn-bulk {
-  padding: 8px 15px;
-  border-radius: 6px;
-  border: none;
-  background: white;
-  color: #666;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.85rem;
-  transition: all 0.3s;
-}
-
-.btn-bulk:hover {
-  background: #f8fafc;
-  transform: translateY(-1px);
-}
-
-.btn-bulk.text-danger:hover {
-  background: #fee;
-  color: #e74c3c;
-}
-
-/* Pagination */
-.pagination-section {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #eef2f6;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.pagination-info {
-  font-size: 0.85rem;
-  color: #666;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.pagination-controls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 15px;
-}
-
-.pagination-buttons {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.pagination-btn {
-  min-width: 36px;
-  height: 36px;
-  padding: 0 10px;
-  border: 1px solid #eef2f6;
-  background: white;
-  border-radius: 6px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s;
-  color: #666;
-  font-size: 0.85rem;
-}
-
-.pagination-btn:hover:not(:disabled) {
-  background: #f8fafc;
-  border-color: #3498db;
-  color: #3498db;
-}
-
-.pagination-btn.active {
-  background: linear-gradient(135deg, #3498db, #2980b9);
-  border-color: #2980b9;
-  color: white;
-}
-
-.pagination-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.page-size-selector {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.page-size-selector label {
-  font-size: 0.85rem;
-  color: #666;
-}
-
-.per-page-select {
-  padding: 8px 12px;
-  border: 1px solid #eef2f6;
-  border-radius: 6px;
-  background: white;
-  cursor: pointer;
-  font-size: 0.85rem;
-}
-
-.page-indicator {
-  text-align: center;
-  font-size: 0.8rem;
-  color: #999;
-}
-
-/* Modal Styles */
-.modal-overlay {
+/* Modal */
+.modal-backdrop {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
-  animation: fadeIn 0.3s ease;
+  padding: 1rem;
+  z-index: 1000;
+  animation: fadeIn 0.15s ease;
 }
-
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -2414,509 +936,294 @@ onUnmounted(() => {
     opacity: 1;
   }
 }
-
-.modal-content {
-  background: white;
-  border-radius: 12px;
-  width: 90%;
-  max-height: 90vh;
+.modal-card {
+  background: #ffffff;
+  width: 100%;
+  max-width: 560px;
+  border-radius: 1.25rem;
+  padding: 1.75rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.2s ease;
+  max-height: 92vh;
   overflow-y: auto;
-  animation: slideUp 0.3s ease;
 }
-
 @keyframes slideUp {
   from {
-    transform: translateY(30px);
     opacity: 0;
+    transform: translateY(12px);
   }
   to {
-    transform: translateY(0);
     opacity: 1;
+    transform: translateY(0);
   }
 }
-
-.register-modal {
-  max-width: 650px;
-}
-
-.delete-modal,
-.reset-password-modal {
-  max-width: 450px;
-}
-
 .modal-header {
-  padding: 20px 25px;
-  border-bottom: 1px solid #eef2f6;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  position: sticky;
-  top: 0;
-  background: white;
-  z-index: 10;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
 }
-
-.modal-header-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.modal-header-left i {
-  font-size: 1.3rem;
-  color: #3498db;
-}
-
 .modal-header h3 {
   margin: 0;
-  color: #333;
-  font-size: 1.2rem;
+  font-size: 1.15rem;
+  color: #1a2634;
 }
-
-.modal-header-actions {
-  display: flex;
-  gap: 10px;
+.modal-subtitle {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  color: #5e6f8d;
 }
-
-.close-btn {
-  background: none;
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 0.5rem;
+  background: #f1f3f8;
   border: none;
-  font-size: 1.2rem;
+  color: #5e6f8d;
   cursor: pointer;
-  color: #999;
-  padding: 5px;
-  transition: color 0.3s;
-}
-
-.close-btn:hover {
-  color: #e74c3c;
-}
-
-.modal-icon {
-  width: 45px;
-  height: 45px;
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.3rem;
+  transition: all 0.15s ease;
+}
+.modal-close:hover {
+  background: #e2e8f0;
+  color: #1a2634;
 }
 
-.modal-icon.warning {
-  background: #fee;
-  color: #e74c3c;
-}
-
-.modal-icon.info {
-  background: #e3f2fd;
-  color: #3498db;
-}
-
-.modal-body {
-  padding: 25px;
-}
-
-.modal-footer {
-  padding: 20px 25px;
-  border-top: 1px solid #eef2f6;
+.modal-form {
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  position: sticky;
-  bottom: 0;
-  background: white;
+  flex-direction: column;
+  gap: 1rem;
+}
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.form-group > label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #2c3e66;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.form-control {
+  width: 100%;
+  padding: 0.7rem 0.95rem;
+  font-size: 0.92rem;
+  border-radius: 0.7rem;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  color: #1a2634;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+.form-control:focus {
+  border-color: #1e88e5;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(30, 136, 229, 0.12);
+}
+.field-hint {
+  font-size: 0.72rem;
+  color: #8a95a8;
+  margin-top: 0.15rem;
 }
 
-/* Register Form Styles */
-.register-form .form-row {
+/* Two-column row for first/last name */
+.form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 15px;
-  margin-bottom: 15px;
+  gap: 0.85rem;
 }
 
-@media (max-width: 768px) {
-  .register-form .form-row {
-    grid-template-columns: 1fr;
-  }
+/* Inputs with icon prefixes */
+.input-with-icon {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 0.7rem;
+  background: #f8fafc;
+  overflow: hidden;
+  transition: all 0.2s ease;
 }
-
-.form-group {
-  margin-bottom: 15px;
+.input-with-icon:focus-within {
+  border-color: #1e88e5;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(30, 136, 229, 0.12);
 }
-
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  color: #333;
+.input-prefix,
+.input-suffix {
+  padding: 0.7rem 0.85rem;
+  background: #eef2f7;
   font-size: 0.85rem;
+  color: #5e6f8d;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+.input-prefix {
+  border-right: 1.5px solid #e2e8f0;
+}
+.input-suffix {
+  border-left: 1.5px solid #e2e8f0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #5e6f8d;
+  padding: 0.7rem 0.85rem;
+}
+.input-suffix:hover {
+  color: #1e88e5;
+}
+.input-with-icon .form-control {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}
+.input-with-icon .form-control:focus {
+  box-shadow: none;
+}
+
+/* Toggle switch */
+.switch-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.88rem;
+  color: #2c3e66;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.switch-row input[type='checkbox'] {
+  display: none;
+}
+.switch {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  background: #cbd5e1;
+  border-radius: 999px;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+}
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.switch-row input:checked + .switch {
+  background: #1e88e5;
+}
+.switch-row input:checked + .switch::after {
+  transform: translateX(18px);
+}
+.switch-label {
   font-weight: 500;
 }
 
-.form-group .required {
-  color: #e74c3c;
-}
-
-.input-group {
-  position: relative;
+/* Messages */
+.msg {
   display: flex;
   align-items: center;
-}
-
-.input-group i:first-child {
-  position: absolute;
-  left: 12px;
-  color: #999;
-  font-size: 0.9rem;
-}
-
-.input-group .form-control {
-  padding-left: 35px;
-}
-
-.password-toggle {
-  position: absolute;
-  right: 10px;
-  background: none;
-  border: none;
-  color: #999;
-  cursor: pointer;
-  padding: 5px;
-}
-
-.password-toggle:hover {
-  color: #3498db;
-}
-
-.form-text {
-  display: block;
-  margin-top: 5px;
-  font-size: 0.7rem;
-  color: #999;
-}
-
-.error-text {
-  display: block;
-  margin-top: 5px;
-  font-size: 0.75rem;
-  color: #e74c3c;
-}
-
-/* File Upload Styles */
-.file-upload-wrapper {
-  margin-top: 5px;
-}
-
-.file-upload-preview {
-  position: relative;
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 2px solid #eef2f6;
-}
-
-.file-upload-preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.remove-photo {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  width: 25px;
-  height: 25px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.5);
-  color: white;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.remove-photo:hover {
-  background: rgba(231, 76, 60, 0.8);
-}
-
-.file-upload-placeholder {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  border: 2px dashed #eef2f6;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s;
-  background: #f8fafc;
-}
-
-.file-upload-placeholder:hover {
-  border-color: #3498db;
-  background: #e3f2fd;
-}
-
-.file-upload-placeholder i {
-  font-size: 2rem;
-  color: #3498db;
-  margin-bottom: 5px;
-}
-
-.file-upload-placeholder p {
-  font-size: 0.7rem;
-  color: #666;
-  margin: 5px 0;
-}
-
-.file-upload-placeholder small {
-  font-size: 0.6rem;
-  color: #999;
-}
-
-/* Warning Text */
-.warning-text {
-  font-size: 1rem;
-  color: #333;
-  margin: 15px 0;
-  padding: 10px;
-  background: #f8fafc;
-  border-radius: 8px;
-  text-align: center;
-}
-
-.warning-note {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #f39c12;
+  gap: 0.5rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 0.7rem;
   font-size: 0.85rem;
-  margin-top: 15px;
-  padding: 10px;
-  background: #fff3cd;
-  border-radius: 8px;
+  margin: 0;
+}
+.error-msg {
+  background: #fdecea;
+  color: #c62828;
 }
 
-/* Selected List */
-.selected-list {
-  margin: 15px 0;
-  max-height: 200px;
-  overflow-y: auto;
-  border: 1px solid #eef2f6;
-  border-radius: 8px;
-}
-
-.selected-item {
+/* Modal actions */
+.modal-actions {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 15px;
-  border-bottom: 1px solid #eef2f6;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
 }
-
-.selected-item:last-child {
-  border-bottom: none;
-}
-
-.selected-item i {
-  color: #3498db;
-}
-
-.more-items {
-  padding: 10px 15px;
-  color: #999;
-  font-style: italic;
-  font-size: 0.85rem;
-}
-
-/* Buttons */
-.btn-secondary {
-  padding: 10px 20px;
-  background: #f8fafc;
-  color: #666;
-  border: 1px solid #eef2f6;
-  border-radius: 8px;
+.btn-cancel,
+.btn-save {
+  padding: 0.7rem 1.2rem;
+  border-radius: 0.7rem;
   font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  transition: all 0.3s;
+  gap: 0.4rem;
 }
-
-.btn-secondary:hover {
-  background: #eef2f6;
+.btn-cancel {
+  background: #f1f3f8;
+  color: #2c3e66;
 }
-
-.btn-danger {
-  padding: 10px 20px;
-  background: linear-gradient(135deg, #e74c3c, #c0392b);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.3s;
+.btn-cancel:hover {
+  background: #e2e8f0;
 }
-
-.btn-danger:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
+.btn-save {
+  background: linear-gradient(135deg, #1e88e5, #0d47a1);
+  color: #ffffff;
+  box-shadow: 0 6px 12px rgba(30, 136, 229, 0.25);
 }
-
-.btn-danger:disabled {
-  opacity: 0.6;
+.btn-save:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(30, 136, 229, 0.35);
+}
+.btn-save:disabled {
+  opacity: 0.55;
   cursor: not-allowed;
-}
-
-/* Toast Notification */
-.toast-notification {
-  position: fixed;
-  bottom: 30px;
-  right: 30px;
-  padding: 12px 20px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  animation: slideInRight 0.3s ease;
-  z-index: 2100;
-  border-left: 4px solid;
-  font-size: 0.85rem;
-}
-
-.toast-notification.success {
-  border-left-color: #27ae60;
-}
-
-.toast-notification.error {
-  border-left-color: #e74c3c;
-}
-
-.toast-notification.info {
-  border-left-color: #3498db;
-}
-
-.toast-notification i {
-  font-size: 1rem;
-}
-
-.toast-notification.success i {
-  color: #27ae60;
-}
-
-.toast-notification.error i {
-  color: #e74c3c;
-}
-
-.toast-notification.info i {
-  color: #3498db;
-}
-
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-/* Empty State */
-.empty-state-small {
-  text-align: center;
-  padding: 40px;
-  color: #999;
-}
-
-.empty-state-small i {
-  font-size: 3rem;
-  margin-bottom: 10px;
-  color: #ddd;
-}
-
-.text-center {
-  text-align: center;
+  box-shadow: none;
 }
 
 /* Responsive */
-@media (max-width: 768px) {
-  .users-list-container {
-    padding: 10px;
+@media (max-width: 1024px) {
+  .summary-strip {
+    grid-template-columns: repeat(2, 1fr);
   }
+}
 
-  .page-header {
+@media (max-width: 640px) {
+  .list-card {
+    padding: 1.25rem;
+    border-radius: 1rem;
+  }
+  .list-header {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
   }
-
-  .header-actions {
+  .btn-create {
     width: 100%;
-  }
-
-  .btn-primary,
-  .btn-export,
-  .btn-import {
-    flex: 1;
     justify-content: center;
   }
-
-  .stats-cards {
+  .summary-strip {
     grid-template-columns: 1fr;
   }
-
-  .bulk-actions {
-    flex-direction: column;
-    align-items: flex-start;
+  .user-table th,
+  .user-table td {
+    padding: 0.6rem 0.7rem;
+    font-size: 0.8rem;
   }
-
-  .bulk-buttons {
-    width: 100%;
+  .desc {
+    max-width: 140px;
   }
-
-  .btn-bulk {
-    flex: 1;
-    justify-content: center;
-  }
-
-  .pagination-controls {
-    flex-direction: column;
-  }
-
-  .pagination-buttons {
-    justify-content: center;
-  }
-
-  .toast-notification {
-    left: 20px;
-    right: 20px;
-    bottom: 20px;
-  }
-
-  .modal-content {
-    width: 95%;
-  }
-
-  .modal-footer {
-    flex-direction: column;
-  }
-
-  .btn-secondary,
-  .btn-danger,
-  .btn-primary {
-    width: 100%;
-    justify-content: center;
+  .form-row {
+    grid-template-columns: 1fr;
   }
 }
 </style>

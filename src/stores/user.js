@@ -1,32 +1,64 @@
 import { defineStore } from 'pinia'
 import axios from 'axios'
 
-// const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
-const API_URL = import.meta.env.VITE_API_URL || 'https://api.ebon.bas.co.tz/api/v1'
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
+// const API_URL = import.meta.env.VITE_API_URL || 'https://api.ebon.bas.co.tz/api/v1'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
     users: [],
     currentUser: null,
+
+    /* Pagination */
+    currentPage: 1,
+    lastPage: 1,
+    perPage: 15,
+    total: 0,
+
+    /* UI state */
     loading: false,
+    submitting: false,
     error: null,
     isOnline: navigator.onLine,
   }),
 
   getters: {
-    totalUsers: (state) => state.users.length,
-    activeUsers: (state) => state.users.filter((u) => u.status === 'active').length,
+    totalUsers: (state) => state.total || state.users.length,
+
+    activeUsers: (state) =>
+      state.users.filter((u) => u.is_active === true || u.status === 'active').length,
+
+    inactiveUsers: (state) =>
+      state.users.filter((u) => u.is_active === false || u.status === 'inactive').length,
+
     adminUsers: (state) => state.users.filter((u) => u.role === 'admin').length,
+
+    managerUsers: (state) => state.users.filter((u) => u.role === 'manager').length,
+
+    collectorUsers: (state) => state.users.filter((u) => u.role === 'collector').length,
+
+    usersWithPhone: (state) => state.users.filter((u) => u.phone && String(u.phone).trim()).length,
+
+    /** Pick a single user by id */
+    userById: (state) => (id) => state.users.find((u) => u.id === id),
+
+    /** Pagination helper */
+    hasMorePages: (state) => state.currentPage < state.lastPage,
   },
 
   actions: {
+    /* ---------------------------------------------------------- */
+    /* Lifecycle                                                    */
+    /* ---------------------------------------------------------- */
     async init() {
-      if (this.isOnline) {
-        await this.fetchUsers()
-      }
-
+      if (this.isOnline) await this.fetchUsers()
       window.addEventListener('online', this.handleOnline)
       window.addEventListener('offline', this.handleOffline)
+    },
+
+    cleanup() {
+      window.removeEventListener('online', this.handleOnline)
+      window.removeEventListener('offline', this.handleOffline)
     },
 
     handleOnline() {
@@ -39,6 +71,93 @@ export const useUserStore = defineStore('user', {
       this.error = 'You are offline. Please check your internet connection.'
     },
 
+    /* ---------------------------------------------------------- */
+    /* Helpers                                                      */
+    /* ---------------------------------------------------------- */
+    _buildFormData(payload = {}) {
+      const formData = new FormData()
+      Object.entries(payload).forEach(([key, value]) => {
+        if (value === null || value === undefined) return
+        if (typeof value === 'boolean') {
+          formData.append(key, value ? 1 : 0)
+        } else {
+          formData.append(key, value)
+        }
+      })
+      return formData
+    },
+
+    _extractError(error, fallback = 'Request failed') {
+      /* Prefer first validation error if present */
+      const validationErrors = error?.response?.data?.errors
+      if (validationErrors && typeof validationErrors === 'object') {
+        const firstKey = Object.keys(validationErrors)[0]
+        if (firstKey && Array.isArray(validationErrors[firstKey])) {
+          return validationErrors[firstKey][0]
+        }
+      }
+
+      return (
+        error?.response?.data?.message || error?.response?.data?.error || error?.message || fallback
+      )
+    },
+
+    /**
+     * Normalize the API payload into a flat array of users.
+     * Handles three shapes:
+     *   1. { success, data: { items: [...] } }          ← new controller
+     *   2. { success, data: { data: [...] } }           ← Laravel paginator
+     *   3. { success, data: [...] }                     ← flat array
+     */
+    _extractUsers(responseData) {
+      const raw = responseData?.data
+      if (!raw) return { items: [], meta: null }
+
+      /* Shape 1: { items: [...], current_page, ... } */
+      if (Array.isArray(raw.items)) {
+        return {
+          items: raw.items,
+          meta: {
+            current_page: raw.current_page ?? 1,
+            last_page: raw.last_page ?? 1,
+            per_page: raw.per_page ?? raw.items.length,
+            total: raw.total ?? raw.items.length,
+          },
+        }
+      }
+
+      /* Shape 2: { data: [...], current_page, ... } */
+      if (Array.isArray(raw.data)) {
+        return {
+          items: raw.data,
+          meta: {
+            current_page: raw.current_page ?? 1,
+            last_page: raw.last_page ?? 1,
+            per_page: raw.per_page ?? raw.data.length,
+            total: raw.total ?? raw.data.length,
+          },
+        }
+      }
+
+      /* Shape 3: [ ... ] */
+      if (Array.isArray(raw)) {
+        return {
+          items: raw,
+          meta: {
+            current_page: 1,
+            last_page: 1,
+            per_page: raw.length,
+            total: raw.length,
+          },
+        }
+      }
+
+      return { items: [], meta: null }
+    },
+
+    /* ---------------------------------------------------------- */
+    /* Read                                                         */
+    /* ---------------------------------------------------------- */
     async fetchUsers(params = {}) {
       if (!this.isOnline) {
         this.error = 'No internet connection. Please connect to the internet.'
@@ -49,20 +168,34 @@ export const useUserStore = defineStore('user', {
       this.error = null
 
       try {
-        const response = await axios.get(`${API_URL}/users`, { params })
+        const response = await axios.get(`${API_URL}/users`, {
+          params: {
+            per_page: this.perPage,
+            page: this.currentPage,
+            ...params,
+          },
+        })
 
         if (response.data.success) {
-          this.users = response.data.data.data || response.data.data || []
+          const { items, meta } = this._extractUsers(response.data)
 
-          return {
-            success: true,
-            data: response.data.data,
+          this.users = items
+
+          if (meta) {
+            this.currentPage = meta.current_page
+            this.lastPage = meta.last_page
+            this.perPage = meta.per_page
+            this.total = meta.total
+          } else {
+            this.total = items.length
           }
+
+          return { success: true, data: items, meta }
         }
 
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to fetch users'
+        this.error = this._extractError(error, 'Failed to fetch users')
         throw error
       } finally {
         this.loading = false
@@ -70,253 +203,250 @@ export const useUserStore = defineStore('user', {
     },
 
     async fetchUser(id) {
-      if (!this.isOnline) {
-        throw new Error('No internet connection. Cannot fetch user details.')
-      }
+      if (!this.isOnline) throw new Error('No internet connection. Cannot fetch user details.')
 
       this.loading = true
       this.error = null
 
       try {
         const response = await axios.get(`${API_URL}/users/${id}`)
-
         if (response.data.success) {
           this.currentUser = response.data.data
           return this.currentUser
         }
-
         throw new Error('User not found')
       } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to fetch user'
+        this.error = this._extractError(error, 'Failed to fetch user')
         throw error
       } finally {
         this.loading = false
       }
     },
 
-    async createUser(formData) {
-      if (!this.isOnline) {
-        throw new Error('No internet connection. Cannot create user.')
-      }
+    /* ---------------------------------------------------------- */
+    /* Pagination helper                                            */
+    /* ---------------------------------------------------------- */
+    async goToPage(page) {
+      this.currentPage = page
+      return this.fetchUsers({ page })
+    },
 
-      this.loading = true
+    /* ---------------------------------------------------------- */
+    /* Create                                                       */
+    /* ---------------------------------------------------------- */
+    async createUser(payload) {
+      if (!this.isOnline) throw new Error('No internet connection. Cannot create user.')
+
+      this.submitting = true
       this.error = null
 
       try {
+        const formData = this._buildFormData(payload)
+
         const response = await axios.post(`${API_URL}/users`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         })
 
         if (response.data.success) {
-          await this.fetchUsers()
+          /* Optimistic insert at top */
+          if (response.data.data) {
+            this.users = [response.data.data, ...this.users]
+            this.total += 1
+          }
+          /* Refresh in background for consistency */
+          this.fetchUsers().catch(() => {})
         }
 
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to create user'
+        this.error = this._extractError(error, 'Failed to create user')
         throw error
       } finally {
-        this.loading = false
+        this.submitting = false
       }
     },
 
-    async updateUser(id, formData) {
-      if (!this.isOnline) {
-        throw new Error('No internet connection. Cannot update user.')
-      }
+    /* ---------------------------------------------------------- */
+    /* Update                                                       */
+    /* ---------------------------------------------------------- */
+    async updateUser(id, payload) {
+      if (!this.isOnline) throw new Error('No internet connection. Cannot update user.')
 
-      this.loading = true
+      this.submitting = true
       this.error = null
 
       try {
+        const formData = this._buildFormData(payload)
         formData.append('_method', 'PUT')
+
         const response = await axios.post(`${API_URL}/users/${id}`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         })
 
         if (response.data.success) {
-          await this.fetchUsers()
-          if (this.currentUser?.id === id) {
-            this.currentUser = response.data.data
+          /* Update in place */
+          const index = this.users.findIndex((u) => u.id === id)
+          if (index !== -1 && response.data.data) {
+            this.users[index] = response.data.data
           }
+          if (this.currentUser?.id === id) this.currentUser = response.data.data
         }
 
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to update user'
+        this.error = this._extractError(error, 'Failed to update user')
         throw error
       } finally {
-        this.loading = false
+        this.submitting = false
       }
     },
 
-    async updateUserStatus(id, status) {
-      if (!this.isOnline) {
-        throw new Error('No internet connection. Cannot update user status.')
-      }
+    async updateUserStatus(id, value) {
+      if (!this.isOnline) throw new Error('No internet connection. Cannot update user status.')
+
+      const isActive = typeof value === 'boolean' ? value : value === 'active'
+      const status = isActive ? 'active' : 'inactive'
 
       try {
-        const response = await axios.put(`${API_URL}/users/${id}/status`, { status })
+        const response = await axios.put(`${API_URL}/users/${id}/status`, {
+          is_active: isActive,
+        })
 
         if (response.data.success) {
-          // Update user in the list
           const index = this.users.findIndex((u) => u.id === id)
           if (index !== -1) {
+            this.users[index].is_active = isActive
             this.users[index].status = status
           }
-
           if (this.currentUser?.id === id) {
+            this.currentUser.is_active = isActive
             this.currentUser.status = status
           }
         }
 
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to update user status'
+        this.error = this._extractError(error, 'Failed to update user status')
         throw error
       }
     },
 
     async resetPassword(id, password) {
-      if (!this.isOnline) {
-        throw new Error('No internet connection. Cannot reset password.')
-      }
+      if (!this.isOnline) throw new Error('No internet connection. Cannot reset password.')
 
       try {
-        const response = await axios.post(`${API_URL}/users/${id}/reset-password`, { password })
-
+        const response = await axios.post(`${API_URL}/users/${id}/reset-password`, {
+          password,
+          password_confirmation: password,
+        })
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to reset password'
+        this.error = this._extractError(error, 'Failed to reset password')
         throw error
       }
     },
 
-    async deleteUser(id) {
-      if (!this.isOnline) {
-        throw new Error('No internet connection. Cannot delete user.')
-      }
-
-      try {
-        const response = await axios.delete(`${API_URL}/users/${id}`)
-
-        if (response.data.success || response.data.status === 'success') {
-          // Remove from local users array
-          this.users = this.users.filter((u) => u.id !== id)
-
-          if (this.currentUser?.id === id) {
-            this.currentUser = null
-          }
-
-          return response.data
-        }
-
-        throw new Error(response.data.message || 'Failed to delete user')
-      } catch (error) {
-        console.error('Delete user error:', error)
-
-        let errorMessage = 'Failed to delete user'
-
-        if (error.response?.data?.message) {
-          errorMessage = error.response.data.message
-        } else if (error.response?.data?.error) {
-          errorMessage = error.response.data.error
-        } else if (error.message) {
-          errorMessage = error.message
-        }
-
-        if (error.response?.status === 403) {
-          errorMessage = 'You do not have permission to delete this user'
-        } else if (error.response?.status === 404) {
-          errorMessage = 'User not found'
-        }
-
-        const customError = new Error(errorMessage)
-        customError.response = error.response
-        throw customError
-      }
-    },
-
     async assignRole(userId, role) {
-      if (!this.isOnline) {
-        throw new Error('No internet connection. Cannot assign role.')
-      }
+      if (!this.isOnline) throw new Error('No internet connection. Cannot assign role.')
 
       try {
         const response = await axios.put(`${API_URL}/users/${userId}/role`, { role })
 
         if (response.data.success) {
-          // Update user in the list
           const index = this.users.findIndex((u) => u.id === userId)
-          if (index !== -1) {
-            this.users[index].role = role
-          }
-
-          if (this.currentUser?.id === userId) {
-            this.currentUser.role = role
-          }
+          if (index !== -1) this.users[index].role = role
+          if (this.currentUser?.id === userId) this.currentUser.role = role
         }
 
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to assign role'
+        this.error = this._extractError(error, 'Failed to assign role')
         throw error
       }
     },
 
-    async getCurrentUser() {
-      if (!this.isOnline) {
-        throw new Error('No internet connection.')
+    /* ---------------------------------------------------------- */
+    /* Delete                                                       */
+    /* ---------------------------------------------------------- */
+    async deleteUser(id) {
+      if (!this.isOnline) throw new Error('No internet connection. Cannot delete user.')
+
+      try {
+        const response = await axios.delete(`${API_URL}/users/${id}`)
+
+        if (response.data.success || response.data.status === 'success') {
+          this.users = this.users.filter((u) => u.id !== id)
+          this.total = Math.max(0, this.total - 1)
+          if (this.currentUser?.id === id) this.currentUser = null
+          return response.data
+        }
+
+        throw new Error(response.data.message || 'Failed to delete user')
+      } catch (error) {
+        const errorMessage = this._extractError(error, 'Failed to delete user')
+
+        if (error.response?.status === 403)
+          this.error = 'You do not have permission to delete this user'
+        else if (error.response?.status === 404) this.error = 'User not found'
+        else this.error = errorMessage
+
+        const customError = new Error(this.error)
+        customError.response = error.response
+        throw customError
       }
+    },
+
+    /* ---------------------------------------------------------- */
+    /* Profile                                                      */
+    /* ---------------------------------------------------------- */
+    async getCurrentUser() {
+      if (!this.isOnline) throw new Error('No internet connection.')
 
       try {
         const response = await axios.get(`${API_URL}/users/me`)
-
         if (response.data.success) {
           this.currentUser = response.data.data
           return this.currentUser
         }
-
         throw new Error('Failed to get current user')
       } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to get current user'
+        this.error = this._extractError(error, 'Failed to get current user')
         throw error
       }
     },
 
-    async updateProfile(formData) {
-      if (!this.isOnline) {
-        throw new Error('No internet connection. Cannot update profile.')
-      }
+    async updateProfile(payload) {
+      if (!this.isOnline) throw new Error('No internet connection. Cannot update profile.')
 
-      this.loading = true
+      this.submitting = true
       this.error = null
 
       try {
+        const formData = this._buildFormData(payload)
+
         const response = await axios.post(`${API_URL}/users/profile`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         })
 
         if (response.data.success) {
-          if (this.currentUser) {
-            this.currentUser = response.data.data
-          }
+          if (this.currentUser) this.currentUser = response.data.data
           await this.fetchUsers()
         }
 
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to update profile'
+        this.error = this._extractError(error, 'Failed to update profile')
         throw error
       } finally {
-        this.loading = false
+        this.submitting = false
       }
     },
 
+    /* ---------------------------------------------------------- */
+    /* Import / Export                                              */
+    /* ---------------------------------------------------------- */
     async exportUsers(filters = {}) {
-      if (!this.isOnline) {
-        throw new Error('No internet connection. Cannot export users.')
-      }
+      if (!this.isOnline) throw new Error('No internet connection. Cannot export users.')
 
       try {
         const response = await axios.get(`${API_URL}/users/export`, {
@@ -324,7 +454,6 @@ export const useUserStore = defineStore('user', {
           responseType: 'blob',
         })
 
-        // Create download link
         const url = window.URL.createObjectURL(new Blob([response.data]))
         const link = document.createElement('a')
         link.href = url
@@ -336,15 +465,13 @@ export const useUserStore = defineStore('user', {
 
         return { success: true }
       } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to export users'
+        this.error = this._extractError(error, 'Failed to export users')
         throw error
       }
     },
 
     async importUsers(file) {
-      if (!this.isOnline) {
-        throw new Error('No internet connection. Cannot import users.')
-      }
+      if (!this.isOnline) throw new Error('No internet connection. Cannot import users.')
 
       const formData = new FormData()
       formData.append('file', file)
@@ -354,39 +481,25 @@ export const useUserStore = defineStore('user', {
           headers: { 'Content-Type': 'multipart/form-data' },
         })
 
-        if (response.data.success) {
-          await this.fetchUsers()
-        }
-
+        if (response.data.success) await this.fetchUsers()
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to import users'
+        this.error = this._extractError(error, 'Failed to import users')
         throw error
       }
     },
 
     async getPermissions() {
-      if (!this.isOnline) {
-        throw new Error('No internet connection.')
-      }
+      if (!this.isOnline) throw new Error('No internet connection.')
 
       try {
         const response = await axios.get(`${API_URL}/users/permissions`)
-
-        if (response.data.success) {
-          return response.data.data
-        }
-
+        if (response.data.success) return response.data.data
         throw new Error('Failed to get permissions')
       } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to get permissions'
+        this.error = this._extractError(error, 'Failed to get permissions')
         throw error
       }
-    },
-
-    cleanup() {
-      window.removeEventListener('online', this.handleOnline)
-      window.removeEventListener('offline', this.handleOffline)
     },
   },
 })

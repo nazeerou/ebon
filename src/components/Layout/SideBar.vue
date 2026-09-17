@@ -158,7 +158,7 @@
         <div class="section-header" @click="toggleSection('finance')">
           <div class="section-title">
             <i class="fas fa-chart-line"></i>
-            <span>Fedha</span>
+            <span>Matumizi</span>
           </div>
           <i class="fas fa-chevron-down" :class="{ rotated: openSections.finance }"></i>
         </div>
@@ -171,6 +171,29 @@
           >
             <i class="fas fa-receipt"></i>
             <span>Gharama na Matumizi</span>
+          </router-link>
+        </div>
+      </div>
+
+      <!-- Users Section – Admin only -->
+      <!-- Users Section – Admin only -->
+      <div class="nav-section" v-if="isAdmin">
+        <div class="section-header" @click="toggleSection('users')">
+          <div class="section-title">
+            <i class="fas fa-users-cog"></i>
+            <span>Manage users</span>
+          </div>
+          <i class="fas fa-chevron-down" :class="{ rotated: openSections.users }"></i>
+        </div>
+        <div class="submenu" v-show="openSections.users">
+          <router-link
+            to="/users"
+            class="submenu-item"
+            active-class="active"
+            @click="closeSidebarOnMobile"
+          >
+            <i class="fas fa-user-cog"></i>
+            <span>Manage Users</span>
           </router-link>
         </div>
       </div>
@@ -306,7 +329,7 @@ const userRole = computed(() => {
 
 // Role checks
 const isAdmin = computed(() => authStore.user?.role === 'admin')
-const isManager = computed(() => authStore.user?.role === 'manager')
+const isManager = computed(() => authStore.user?.role === 'meneja' || 'mkusanyaji')
 
 const userAvatar = computed(() => {
   const name = userDisplayName.value

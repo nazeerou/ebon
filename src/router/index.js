@@ -32,6 +32,7 @@ import OCRScanner from '@/views/readings/OCRScanner.vue'
 import CollectionList from '@/views/collections/CollectionList.vue'
 import BranchesList from '@/views/machines/BranchesList.vue'
 import ExpenseList from '@/views/expenses/ExpenseList.vue'
+import UserList from '@/views/users/UserList.vue'
 // import CollectionForm from '@/views/collections/CollectionForm.vue'
 
 // // Expense pages
@@ -157,15 +158,15 @@ const routes = [
           icon: 'store',
         },
       },
-      // {
-      //   path: 'branches/create',
-      //   name: 'BranchCreate',
-      //   component: BranchForm,
-      //   meta: {
-      //     title: 'Sajili Tawi',
-      //     icon: 'plus-circle',
-      //   },
-      // },
+      {
+        path: 'users',
+        name: 'Users',
+        component: UserList,
+        meta: {
+          title: 'Users',
+          icon: 'plus-circle',
+        },
+      },
       // {
       //   path: 'branches/:id/edit',
       //   name: 'BranchEdit',
