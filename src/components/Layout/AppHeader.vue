@@ -230,6 +230,7 @@ const userDisplayName = computed(() => {
   if (authStore.user) {
     const firstName = authStore.user.first_name || ''
     const lastName = authStore.user.last_name || ''
+
     if (firstName || lastName) {
       return `${firstName} ${lastName}`.trim()
     }

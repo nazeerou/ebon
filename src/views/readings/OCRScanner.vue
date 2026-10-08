@@ -10,6 +10,22 @@
     <div class="ocr-card">
       <!-- Single Form -->
       <div class="form-wrapper">
+        <!-- ✅ Hidden user_id (submitted with the form) -->
+        <input type="hidden" name="user_id" v-model="userId" />
+
+        <!-- ✅ Logged-in user banner (visible) -->
+        <div v-if="userId" class="user-banner">
+          <div class="user-avatar">
+            <i class="fas fa-user"></i>
+          </div>
+          <div class="user-info">
+            <span class="user-label">Mtumiaji aliyeingia</span>
+            <span class="user-name">{{ userName || 'Mtumiaji' }}</span>
+            <span class="user-email" v-if="userEmail">{{ userEmail }}</span>
+          </div>
+          <span class="user-id-badge">ID: {{ userId }}</span>
+        </div>
+
         <!-- Machine Code -->
         <div class="form-group">
           <label>Code ya Mashine <span class="required">*</span></label>
@@ -17,18 +33,56 @@
             <input
               type="text"
               v-model="machineCodeInput"
-              @input="debouncedFindMachine"
+              @keyup.enter.prevent="searchMachine"
+              @blur="onMachineCodeBlur"
               class="form-control"
+              :class="{ 'is-loading': isFetching }"
               placeholder="Mfano: BN001"
-              :disabled="saved"
+              :disabled="saved || isFetching"
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
               autofocus
             />
-            <span v-if="searching" class="search-spinner">
+
+            <!-- ✅ Loader: spinner + "Fetching..." text -->
+            <span v-if="isFetching" class="search-spinner">
               <i class="fas fa-spinner fa-spin"></i>
+              <span class="search-spinner-text">Fetching...</span>
             </span>
+
+            <!-- ✅ Manual search button (shown when not loading) -->
+            <button
+              v-else
+              type="button"
+              class="search-btn-inline"
+              :disabled="saved || machineCodeInput.trim().length < 2"
+              @click="searchMachine"
+              title="Tafuta mashine"
+            >
+              <i class="fas fa-search"></i>
+            </button>
           </div>
-          <p class="input-hint" v-if="!machineDetailsFound && !searching">
-            <i class="fas fa-info-circle"></i> Ingiza Code, mfumo utatafuta kiotomatiki
+
+          <!-- ✅ Loading hint -->
+          <p v-if="isFetching" class="input-hint loading-hint">
+            <i class="fas fa-spinner fa-spin"></i>
+            Inatafuta mashine "{{ lastSearchedCode }}"...
+          </p>
+
+          <!-- ✅ Idle hint -->
+          <p v-else-if="!machineDetailsFound && !machineCodeInput" class="input-hint">
+            <i class="fas fa-info-circle"></i>
+            Andika Code kisha bonyeza <kbd>Enter</kbd> au kitufe cha kutafuta
+          </p>
+
+          <!-- ✅ Pending hint (typed something but haven't searched) -->
+          <p
+            v-else-if="!machineDetailsFound && !isFetching && machineCodeInput.trim().length >= 2"
+            class="input-hint pending-hint"
+          >
+            <i class="fas fa-keyboard"></i>
+            Bonyeza <kbd>Enter</kbd> kutafuta "{{ machineCodeInput.trim().toUpperCase() }}"
           </p>
         </div>
 
@@ -51,9 +105,9 @@
         </div>
 
         <!-- Not found message -->
-        <div v-if="machineNotFound" class="alert alert-warning">
+        <div v-if="machineNotFound && !isFetching" class="alert alert-warning">
           <i class="fas fa-exclamation-triangle"></i>
-          Hakuna Mashine yenye Code "{{ machineCodeInput.trim().toUpperCase() }}"
+          Hakuna Mashine yenye Code "{{ lastSearchedCode }}"
         </div>
 
         <!-- Current Reading -->
@@ -253,6 +307,12 @@
 
           <div class="confirmation-details">
             <div class="detail-row">
+              <span class="label">Mtumiaji:</span>
+              <span class="value">
+                {{ userName }} <small v-if="userId">(ID: {{ userId }})</small>
+              </span>
+            </div>
+            <div class="detail-row">
               <span class="label">Mashine:</span>
               <span class="value"
                 >{{ identifiedMachine?.machine_name }} ({{ identifiedMachine?.machine_code }})</span
@@ -327,19 +387,30 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useReadingStore } from '@/stores/reading'
 import { useMachineStore } from '@/stores/Machine'
+import { useAuthStore } from '@/stores/auth'
 import { formatNumber, formatCurrency, formatDate } from '@/utils/formatters'
-import debounce from 'lodash/debounce'
 
 const router = useRouter()
 const readingStore = useReadingStore()
 const machineStore = useMachineStore()
+const authStore = useAuthStore()
+
+// ✅ Logged-in user fields
+const userId = computed(() => authStore.user?.id ?? null)
+const userName = computed(() => {
+  const u = authStore.user
+  if (!u) return ''
+  return u.name || `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim()
+})
+const userEmail = computed(() => authStore.user?.email ?? '')
 
 // Machine search state
 const identifiedMachine = ref(null)
 const machineDetailsFound = ref(false)
 const machineNotFound = ref(false)
 const machineCodeInput = ref('')
-const searching = ref(false)
+const isFetching = ref(false)
+const lastSearchedCode = ref('')
 
 // Manual reading
 const manualReading = ref(null)
@@ -395,21 +466,58 @@ const toastIcon = computed(() =>
   toastType.value === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle',
 )
 
-// Debounced search function
-const findMachineByCode = async (code) => {
-  if (!code || code.trim().length === 0) {
-    machineDetailsFound.value = false
+/* =========================================================
+ * ✅ Professional search — only fires on complete input
+ * ========================================================= */
+
+/**
+ * Triggered by:
+ *  - Enter key in the input
+ *  - Blur (click away / tab out)
+ *  - Click on the "Tafuta" button
+ */
+const searchMachine = () => {
+  const code = machineCodeInput.value?.trim().toUpperCase() ?? ''
+
+  // Too short — clear state and bail
+  if (code.length < 2) {
     identifiedMachine.value = null
+    machineDetailsFound.value = false
     machineNotFound.value = false
     previousReading.value = 0
     return
   }
 
-  searching.value = true
+  // Same code already searched — skip (prevents Enter + blur double fetch)
+  if (code === lastSearchedCode.value && machineDetailsFound.value) return
+
+  lastSearchedCode.value = code
+  findMachineByCode(code)
+}
+
+/**
+ * On blur — only trigger if the field is non-empty and different
+ * from the last searched code. This makes tab-out feel natural.
+ */
+const onMachineCodeBlur = () => {
+  const code = machineCodeInput.value?.trim().toUpperCase() ?? ''
+  if (code.length < 2) return
+  if (code === lastSearchedCode.value && machineDetailsFound.value) return
+  searchMachine()
+}
+
+/**
+ * The actual network call.
+ */
+const findMachineByCode = async (code) => {
+  isFetching.value = true
   machineNotFound.value = false
+  machineDetailsFound.value = false
+  identifiedMachine.value = null
+  previousReading.value = 0
 
   try {
-    const response = await machineStore.fetchMachines({ machine_code: code.trim().toUpperCase() })
+    const response = await machineStore.fetchMachines({ machine_code: code })
     const data = response.data || response
     let machines = []
 
@@ -419,44 +527,30 @@ const findMachineByCode = async (code) => {
       machines = data
     }
 
-    const found = machines.find((m) => m.machine_code.toUpperCase() === code.trim().toUpperCase())
+    const found = machines.find((m) => m.machine_code.toUpperCase() === code)
 
     if (found) {
       identifiedMachine.value = found
       machineDetailsFound.value = true
-      machineNotFound.value = false
 
       try {
-        const lastReading = await readingStore.fetchPreviousReadingByMachineCode(
-          code.trim().toUpperCase(),
-        )
+        const lastReading = await readingStore.fetchPreviousReadingByMachineCode(code)
         previousReading.value = lastReading?.current_reading || 0
       } catch (error) {
         console.error('Error fetching previous reading:', error)
         previousReading.value = 0
       }
     } else {
-      machineDetailsFound.value = false
-      identifiedMachine.value = null
       machineNotFound.value = true
-      previousReading.value = 0
     }
   } catch (error) {
     console.error('Error searching machine:', error)
-    machineDetailsFound.value = false
-    identifiedMachine.value = null
     machineNotFound.value = true
-    previousReading.value = 0
     showToastMessage('Imeshindwa kutafuta mashine', 'error')
   } finally {
-    searching.value = false
+    isFetching.value = false
   }
 }
-
-const debouncedFindMachine = debounce((e) => {
-  const code = machineCodeInput.value
-  findMachineByCode(code)
-}, 500)
 
 // Manual reading validation
 const validateManualReading = () => {
@@ -572,7 +666,6 @@ const retakePhoto = () => {
 }
 
 const acceptPhoto = () => {
-  // Convert data URL to File
   const base64Data = capturedImage.value.split(',')[1]
   const blob = atob(base64Data)
   const arrayBuffer = new ArrayBuffer(blob.length)
@@ -593,7 +686,8 @@ const openConfirmationModal = async () => {
     return
   }
   if (!identifiedMachine.value) {
-    await findMachineByCode(machineCodeInput.value)
+    // Force a search if user skipped it
+    await findMachineByCode(machineCodeInput.value.trim().toUpperCase())
     if (!identifiedMachine.value) {
       showToastMessage(
         `Hakuna mashine yenye Code "${machineCodeInput.value.trim().toUpperCase()}"`,
@@ -622,10 +716,10 @@ const closeConfirmationModal = () => {
 const confirmSave = async () => {
   saving.value = true
   try {
-    // Prepare payload using FormData if image exists
     let payload
     if (imageFile.value) {
       const formData = new FormData()
+      formData.append('user_id', userId.value ?? '')
       formData.append('machine_id', identifiedMachine.value.id)
       formData.append('current_reading', currentReadingValue.value)
       formData.append('reading_date', readingDate.value || new Date().toISOString().slice(0, 10))
@@ -633,16 +727,64 @@ const confirmSave = async () => {
       payload = formData
     } else {
       payload = {
+        user_id: userId.value ?? '',
         machine_id: identifiedMachine.value.id,
         current_reading: currentReadingValue.value,
         reading_date: readingDate.value || new Date().toISOString().slice(0, 10),
       }
     }
 
+    /* 🐞 DEBUG */
+    console.group('%c📤 SUBMITTING READING', 'color:#3b82f6;font-weight:bold;font-size:13px')
+    console.log(
+      'Payload type:',
+      payload instanceof FormData ? 'FormData (with image)' : 'JSON (no image)',
+    )
+    if (payload instanceof FormData) {
+      const entries = {}
+      for (const [key, value] of payload.entries()) {
+        entries[key] =
+          value instanceof File
+            ? `📎 File { name: ${value.name}, size: ${value.size} bytes, type: ${value.type} }`
+            : value
+      }
+      console.log('Payload (FormData):', entries)
+      console.table(entries)
+    } else {
+      console.log('Payload (JSON):', payload)
+      console.table(payload)
+    }
+    console.log('Auth user:', {
+      id: authStore.user?.id,
+      name: userName.value,
+      email: userEmail.value,
+      business_id: authStore.user?.business_id,
+    })
+    console.log('Identified machine:', {
+      id: identifiedMachine.value?.id,
+      code: identifiedMachine.value?.machine_code,
+      name: identifiedMachine.value?.machine_name,
+    })
+    console.log('Computed values:', {
+      previousReading: previousReading.value,
+      currentReading: currentReadingValue.value,
+      difference: difference.value,
+      expectedAmount: expectedAmount.value,
+    })
+    console.groupEnd()
+
     const response = await readingStore.createReading(payload)
 
+    /* 🐞 DEBUG */
+    console.group('%c📥 SERVER RESPONSE', 'color:#10b981;font-weight:bold;font-size:13px')
+    console.log('Success:', response.success)
+    console.log('Status:', response.status)
+    console.log('Message:', response.message)
+    console.log('Data:', response.data)
+    if (response.image_error) console.warn('Image error:', response.image_error)
+    console.groupEnd()
+
     if (response.success) {
-      // Check if there was an image warning
       if (response.status === 'warning') {
         showToastMessage(
           response.message || 'Usomaji umehifadhiwa, lakini picha haikupakiwa.',
@@ -657,7 +799,14 @@ const confirmSave = async () => {
       throw new Error(response.message || 'Failed to save')
     }
   } catch (err) {
-    console.error(err)
+    console.group('%c❌ SUBMIT FAILED', 'color:#ef4444;font-weight:bold;font-size:13px')
+    console.error('Error object:', err)
+    console.error('HTTP status:', err.response?.status)
+    console.error('Response body:', err.response?.data)
+    console.error('Request URL:', err.config?.url)
+    console.error('Request method:', err.config?.method)
+    console.groupEnd()
+
     const message = err.response?.data?.message || err.message || 'Imeshindwa kuhifadhi usomaji'
     showToastMessage(message, 'error')
   } finally {
@@ -672,10 +821,12 @@ const resetAll = () => {
   identifiedMachine.value = null
   machineNotFound.value = false
   machineCodeInput.value = ''
+  lastSearchedCode.value = ''
   previousReading.value = 0
   manualReading.value = null
   manualReadingError.value = ''
   readingDate.value = new Date().toISOString().slice(0, 10)
+  isFetching.value = false
   removeImage()
 }
 
@@ -692,7 +843,6 @@ const showToastMessage = (msg, type = 'success') => {
 // Cleanup
 onUnmounted(() => {
   stopCamera()
-  debouncedFindMachine.cancel()
 })
 
 onMounted(() => {
@@ -701,17 +851,161 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* All existing styles remain, with additions for search spinner */
+/* =========================================================
+ * ✅ Logged-in user banner
+ * ========================================================= */
+.user-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border: 1px solid #bfdbfe;
+  border-radius: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #3b82f6;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+.user-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.user-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+}
+.user-name {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.user-email {
+  font-size: 0.75rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.user-id-badge {
+  background: #3b82f6;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: 1rem;
+  flex-shrink: 0;
+}
+
+/* =========================================================
+ * Machine-code input + loader + inline search button
+ * ========================================================= */
 .search-input-wrapper {
   position: relative;
+  display: flex;
+  align-items: center;
 }
+
 .search-spinner {
   position: absolute;
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
   color: #3b82f6;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  pointer-events: none;
 }
+.search-spinner-text {
+  white-space: nowrap;
+}
+
+/* ✅ Inline "search" button */
+.search-btn-inline {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 32px;
+  width: 32px;
+  border-radius: 0.4rem;
+  border: none;
+  background: #3b82f6;
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    transform 0.1s;
+}
+.search-btn-inline:hover:not(:disabled) {
+  background: #2563eb;
+}
+.search-btn-inline:active:not(:disabled) {
+  transform: translateY(-50%) scale(0.95);
+}
+.search-btn-inline:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-control.is-loading {
+  border-color: #3b82f6;
+  background: #f0f7ff;
+  padding-right: 120px;
+}
+
+.loading-hint {
+  color: #3b82f6 !important;
+  font-weight: 500;
+}
+.loading-hint i {
+  margin-right: 0.35rem;
+}
+
+.pending-hint {
+  color: #475569;
+}
+.pending-hint i {
+  margin-right: 0.35rem;
+  color: #3b82f6;
+}
+
+kbd {
+  background: #1e293b;
+  color: #fff;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.7rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  margin: 0 0.15rem;
+}
+
+/* =========================================================
+ * Rest of the styles
+ * ========================================================= */
 .alert {
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
@@ -725,8 +1019,6 @@ onMounted(() => {
 .alert-warning i {
   margin-right: 0.5rem;
 }
-
-/* All existing styles remain, plus confirmation modal styles */
 .ocr-reading-container {
   max-width: 800px;
   margin: 0 auto;
@@ -756,44 +1048,6 @@ onMounted(() => {
   padding: 1.5rem;
   border: 1px solid #eef2f6;
 }
-.step {
-  margin-bottom: 2rem;
-  border-bottom: 1px solid #e2e8f0;
-  padding-bottom: 1.5rem;
-}
-.step:last-child {
-  border-bottom: none;
-  margin-bottom: 0;
-  padding-bottom: 0;
-}
-.step.disabled {
-  opacity: 0.6;
-  pointer-events: none;
-}
-.step.completed .step-number {
-  background: #10b981;
-}
-.step-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-}
-.step-number {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: #3b82f6;
-  color: white;
-  border-radius: 50%;
-  font-weight: bold;
-}
-.step-header h3 {
-  margin: 0;
-  font-size: 1.25rem;
-}
 .required {
   color: #ef4444;
 }
@@ -804,6 +1058,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 0.25rem;
+  flex-wrap: wrap;
 }
 .error-text {
   color: #ef4444;
@@ -826,43 +1081,14 @@ onMounted(() => {
   border-radius: 0.5rem;
   font-size: 0.875rem;
   background: white;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
 }
 .form-control:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-}
-.form-control-file {
-  padding: 0.5rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 0.5rem;
-  width: 100%;
-}
-.image-preview {
-  position: relative;
-  margin-top: 0.5rem;
-  max-width: 200px;
-}
-.image-preview img {
-  width: 100%;
-  border-radius: 0.5rem;
-  border: 1px solid #e2e8f0;
-}
-.remove-image {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  background: #ef4444;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
 }
 .ocr-results {
   margin-top: 1.5rem;
@@ -948,14 +1174,9 @@ onMounted(() => {
   opacity: 0.6;
   cursor: not-allowed;
 }
-
-/* Confirmation Modal */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
@@ -1031,6 +1252,10 @@ onMounted(() => {
   color: #0f172a;
   font-weight: 500;
 }
+.detail-row .value small {
+  color: #64748b;
+  font-weight: 400;
+}
 .detail-row .value.highlight {
   color: #3b82f6;
 }
@@ -1069,7 +1294,6 @@ onMounted(() => {
   padding: 1rem 1.5rem;
   border-top: 1px solid #e2e8f0;
 }
-
 .saved-confirmation {
   margin-top: 1.5rem;
   padding-top: 1.5rem;
@@ -1101,32 +1325,6 @@ onMounted(() => {
 .toast-notification.error {
   border-left-color: #ef4444;
 }
-@media (max-width: 640px) {
-  .ocr-reading-container {
-    padding: 0.75rem;
-  }
-  .form-actions {
-    flex-direction: column;
-  }
-  .btn-primary,
-  .btn-success,
-  .btn-secondary {
-    justify-content: center;
-  }
-  .results-grid {
-    grid-template-columns: 1fr;
-  }
-  .detail-row {
-    flex-direction: column;
-  }
-  .detail-row .label {
-    width: auto;
-  }
-  .modal-content.confirmation-modal {
-    width: 95%;
-  }
-}
-/* Camera/Upload area */
 .camera-upload-wrapper {
   display: flex;
   align-items: center;
@@ -1172,8 +1370,6 @@ onMounted(() => {
   color: #94a3b8;
   font-size: 0.875rem;
 }
-
-/* Image Preview */
 .image-preview-wrapper {
   margin-top: 0.75rem;
 }
@@ -1251,18 +1447,11 @@ onMounted(() => {
   opacity: 0.5;
   cursor: not-allowed;
 }
-.image-caption {
-  margin-top: 0.5rem;
-  font-size: 0.85rem;
-  color: #64748b;
-  text-align: center;
-}
-/* Styles for smaller camera modal */
 .camera-modal {
   background: #1e293b;
   border-radius: 1rem;
   width: 90%;
-  max-width: 380px; /* smaller */
+  max-width: 380px;
   overflow: hidden;
   color: white;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
@@ -1277,13 +1466,6 @@ onMounted(() => {
 .camera-header h3 {
   margin: 0;
   font-size: 1rem;
-}
-.close-btn {
-  background: none;
-  border: none;
-  color: white;
-  font-size: 1.2rem;
-  cursor: pointer;
 }
 .camera-body {
   background: #000;
@@ -1340,5 +1522,40 @@ onMounted(() => {
 }
 .camera-actions .btn-success:hover {
   background: #059669;
+}
+
+@media (max-width: 640px) {
+  .ocr-reading-container {
+    padding: 0.75rem;
+  }
+  .form-actions {
+    flex-direction: column;
+  }
+  .btn-primary,
+  .btn-success,
+  .btn-secondary {
+    justify-content: center;
+  }
+  .results-grid {
+    grid-template-columns: 1fr;
+  }
+  .detail-row {
+    flex-direction: column;
+  }
+  .detail-row .label {
+    width: auto;
+  }
+  .modal-content.confirmation-modal {
+    width: 95%;
+  }
+  .user-banner {
+    flex-wrap: wrap;
+  }
+  .search-spinner-text {
+    display: none; /* keep just the spinning icon on mobile */
+  }
+  .form-control.is-loading {
+    padding-right: 50px;
+  }
 }
 </style>

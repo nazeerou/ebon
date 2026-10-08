@@ -391,16 +391,50 @@
                 <span>Taarifa za Msingi</span>
               </div>
               <div class="form-grid">
+                <!-- Machine Code with live availability check -->
                 <div class="form-group">
                   <label>Machine Code <span class="required">*</span></label>
-                  <input
-                    type="text"
-                    v-model="form.machine_code"
-                    class="form-control"
-                    placeholder="Eg. A001"
-                    required
-                  />
+                  <div class="input-with-status">
+                    <input
+                      type="text"
+                      v-model="form.machine_code"
+                      class="form-control"
+                      :class="{
+                        'input-error': codeExists,
+                        'input-success':
+                          !codeExists && !!form.machine_code && !checkingCode && codeChecked,
+                      }"
+                      placeholder="Eg. A001"
+                      required
+                      @input="debouncedCheckCode"
+                      @blur="checkMachineCodeAvailability"
+                      @keydown.enter.prevent="checkMachineCodeAvailability"
+                    />
+                    <span v-if="checkingCode" class="input-status checking" title="Inaangalia...">
+                      <i class="fas fa-spinner fa-spin"></i>
+                    </span>
+                    <span v-else-if="codeExists" class="input-status error" title="Code ipo tayari">
+                      <i class="fas fa-times-circle"></i>
+                    </span>
+                    <span
+                      v-else-if="form.machine_code && codeChecked"
+                      class="input-status success"
+                      title="Code inapatikana"
+                    >
+                      <i class="fas fa-check-circle"></i>
+                    </span>
+                  </div>
+                  <small v-if="codeExists" class="field-error">
+                    <i class="fas fa-exclamation-circle"></i> {{ codeCheckMessage }}
+                  </small>
+                  <small
+                    v-else-if="!checkingCode && form.machine_code && codeChecked"
+                    class="field-hint"
+                  >
+                    <!-- <i class="fas fa-check-circle"></i> Code inapatikana -->
+                  </small>
                 </div>
+
                 <div class="form-group">
                   <label>Jina la Mashine <span class="required">*</span></label>
                   <input
@@ -537,7 +571,11 @@
 
             <div class="modal-footer">
               <button type="button" class="btn-secondary" @click="closeModal">Ghairi</button>
-              <button type="submit" class="btn-primary" :disabled="saving">
+              <button
+                type="submit"
+                class="btn-primary"
+                :disabled="saving || codeExists || checkingCode"
+              >
                 <span v-if="saving"><i class="fas fa-spinner fa-spin"></i> Inahifadhi...</span>
                 <span v-else><i class="fas fa-save"></i> Hifadhi</span>
               </button>
@@ -769,6 +807,13 @@ const form = reactive({
   materials: [],
 })
 
+// ---- Machine code availability ----
+const checkingCode = ref(false)
+const codeExists = ref(false)
+const codeChecked = ref(false)
+const codeCheckMessage = ref('')
+let codeCheckTimer = null
+
 // Materials
 const materialOptions = ['Betri', 'Solar', 'Grid', 'Generator', 'Inverter']
 const materialIcons = {
@@ -941,6 +986,75 @@ const clearSearch = () => {
   loadMachines()
 }
 
+// ---- Machine code availability check ----
+const resetCodeCheck = () => {
+  if (codeCheckTimer) clearTimeout(codeCheckTimer)
+  checkingCode.value = false
+  codeExists.value = false
+  codeChecked.value = false
+  codeCheckMessage.value = ''
+}
+
+const checkMachineCodeAvailability = async () => {
+  const code = (form.machine_code || '').trim()
+  codeCheckMessage.value = ''
+  codeExists.value = false
+  codeChecked.value = false
+
+  if (!code) return
+
+  checkingCode.value = true
+  try {
+    const token =
+      localStorage.getItem('token') ||
+      localStorage.getItem('auth_token') ||
+      localStorage.getItem('access_token')
+
+    const params = { machine_code: code }
+    if (isEditing.value && editingId.value) params.exclude_id = editingId.value
+
+    const res = await axios.get(`${API_URL}/machines/check-code`, {
+      params,
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+
+    const payload = res?.data?.data ?? res?.data ?? {}
+    const exists = payload.exists ?? payload.taken ?? false
+
+    codeExists.value = !!exists
+    codeChecked.value = true
+
+    if (codeExists.value) {
+      codeCheckMessage.value =
+        res?.data?.message || `Machine code "${code}" tayari imesajiliwa. Tumia code nyingine.`
+      showToastMessage(codeCheckMessage.value, 'error')
+    }
+  } catch (err) {
+    // Fallback: local check against currently loaded machines
+    console.warn('check-code endpoint unavailable, using local check:', err?.message)
+
+    const localExists = machines.value.some(
+      (m) =>
+        (m.machine_code || '').toLowerCase() === code.toLowerCase() &&
+        (!isEditing.value || Number(m.id) !== Number(editingId.value)),
+    )
+    codeExists.value = localExists
+    codeChecked.value = true
+    if (localExists) {
+      codeCheckMessage.value = `Machine code "${code}" tayari imesajiliwa. Tumia code nyingine.`
+    }
+  } finally {
+    checkingCode.value = false
+  }
+}
+
+const debouncedCheckCode = () => {
+  if (codeCheckTimer) clearTimeout(codeCheckTimer)
+  codeCheckTimer = setTimeout(() => {
+    checkMachineCodeAvailability()
+  }, 500)
+}
+
 // ---- Photo helpers ----
 const setPhotoInputRef = (el, i) => {
   if (el) photoInputRefs.value[i] = el
@@ -1057,6 +1171,7 @@ const openCreateModal = () => {
   customMaterials.value = []
   customMaterial.value = ''
   resetPhotos()
+  resetCodeCheck()
   showMachineModal.value = true
 }
 
@@ -1082,6 +1197,7 @@ const openEditModal = (machine) => {
   customMaterials.value = form.materials.filter((m) => !materialOptions.includes(m))
 
   resetPhotos()
+  resetCodeCheck()
 
   const paths = Array.isArray(machine.photos) ? machine.photos : []
   const urls = Array.isArray(machine.photo_urls) ? machine.photo_urls : []
@@ -1107,7 +1223,6 @@ const openEditModal = (machine) => {
 /**
  * Save (create or update).
  * NO refetch — the store already patched local state.
- * We just sync `machines.value` from the store and adjust the counters.
  */
 const saveMachine = async () => {
   if (
@@ -1118,6 +1233,16 @@ const saveMachine = async () => {
     !form.installation_date
   ) {
     showToastMessage('Tafadhali jaza sehemu zote zinazohitajika.', 'error')
+    return
+  }
+
+  // Final duplicate check before submit
+  await checkMachineCodeAvailability()
+  if (codeExists.value) {
+    showToastMessage(
+      codeCheckMessage.value || 'Machine code tayari ipo. Tumia code nyingine.',
+      'error',
+    )
     return
   }
 
@@ -1173,13 +1298,9 @@ const saveMachine = async () => {
         'success',
       )
 
-      // Sync local list from the store (already patched, no HTTP)
       machines.value = [...machineStore.machines]
 
-      // Adjust counters locally
-      if (wasEditing) {
-        // no count change
-      } else {
+      if (!wasEditing) {
         pagination.total += 1
       }
 
@@ -1204,6 +1325,7 @@ const closeModal = () => {
   isEditing.value = false
   editingId.value = null
   resetPhotos()
+  resetCodeCheck()
 }
 
 // ---- Transfer ----
@@ -1225,10 +1347,6 @@ const closeTransferModal = () => {
   transferSaving.value = false
 }
 
-/**
- * Transfer — needs refetch because the branch of the machine changes
- * and the current machine list wouldn't reflect the transfer without it.
- */
 const saveTransfer = async () => {
   if (!transferForm.to_branch_id || !transferForm.transfer_date) {
     showToastMessage('Tafadhali chagua tawi na tarehe.', 'error')
@@ -1252,7 +1370,6 @@ const saveTransfer = async () => {
     const machineId = transferForm.machine_id
     closeTransferModal()
 
-    // Transfer changes the branch — refresh to reflect it
     await loadMachines()
 
     if (showViewModal.value && viewMachineData.value?.id === machineId) {
@@ -1288,9 +1405,6 @@ const closeDeleteModal = () => {
   machineToDelete.value = null
 }
 
-/**
- * Delete — NO refetch. Store already removed the item.
- */
 const deleteMachine = async () => {
   if (!machineToDelete.value) return
   deleteLoading.value = true
@@ -1302,11 +1416,9 @@ const deleteMachine = async () => {
       showToastMessage(res.message || 'Mashine imefutwa', 'success')
       closeDeleteModal()
 
-      // Sync local list + counters (store already removed it)
       machines.value = [...machineStore.machines]
       if (pagination.total > 0) pagination.total -= 1
 
-      // Also remove from selected
       selectedMachines.value = selectedMachines.value.filter((id) => id !== deletedId)
       updateSelectAll()
     } else {
@@ -1330,7 +1442,6 @@ const bulkActivate = async () => {
     const ok = results.filter((r) => r?.success).length
     showToastMessage(`Mashine ${ok} zimewashwa`, 'success')
 
-    // Sync from store (already patched)
     machines.value = [...machineStore.machines]
     clearSelection()
   } catch (err) {
@@ -1347,7 +1458,6 @@ const bulkDeactivate = async () => {
     const ok = results.filter((r) => r?.success).length
     showToastMessage(`Mashine ${ok} zimezimwa`, 'success')
 
-    // Sync from store (already patched)
     machines.value = [...machineStore.machines]
     clearSelection()
   } catch (err) {
@@ -1363,9 +1473,6 @@ const closeBulkDeleteModal = () => {
   showBulkDeleteModal.value = false
 }
 
-/**
- * Bulk delete — NO refetch. Store already removed the items.
- */
 const bulkDelete = async () => {
   if (!selectedMachines.value.length) return
   deleteLoading.value = true
@@ -1377,7 +1484,6 @@ const bulkDelete = async () => {
       showToastMessage(res.message || `${ids.length} mashine zimefutwa`, 'success')
       closeBulkDeleteModal()
 
-      // Sync from store
       machines.value = [...machineStore.machines]
       pagination.total = Math.max(0, pagination.total - ids.length)
 
@@ -1441,6 +1547,7 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
   debouncedSearch.cancel()
   resetPhotos()
+  if (codeCheckTimer) clearTimeout(codeCheckTimer)
 })
 </script>
 
@@ -1543,9 +1650,13 @@ onUnmounted(() => {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   white-space: nowrap;
 }
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background: #2563eb;
   transform: translateY(-1px);
+}
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Table */
@@ -2251,6 +2362,67 @@ textarea.form-control {
   min-height: 70px;
 }
 
+/* Input with live status icon */
+.input-with-status {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.input-with-status .form-control {
+  padding-right: 2.25rem;
+}
+.input-with-status .form-control.input-error {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+.input-with-status .form-control.input-error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+.input-with-status .form-control.input-success {
+  border-color: #10b981;
+  background: #f0fdf4;
+}
+.input-with-status .form-control.input-success:focus {
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+.input-status {
+  position: absolute;
+  right: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  pointer-events: none;
+}
+.input-status.checking {
+  color: #3b82f6;
+}
+.input-status.error {
+  color: #ef4444;
+}
+.input-status.success {
+  color: #10b981;
+}
+
+.field-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+  color: #dc2626;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.field-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+  color: #059669;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
 /* Material chips */
 .material-chips {
   display: flex;
@@ -2570,7 +2742,6 @@ textarea.form-control {
     padding: 0.7rem 1rem;
   }
 
-  /* Table shrinks */
   .machines-table {
     min-width: 720px;
     font-size: 0.8rem;
@@ -2583,7 +2754,6 @@ textarea.form-control {
     right: -8px;
   }
 
-  /* Bulk stacks */
   .bulk-actions {
     flex-direction: column;
     align-items: stretch;
@@ -2604,7 +2774,6 @@ textarea.form-control {
     padding: 0.5rem 0.75rem;
   }
 
-  /* Modals as bottom sheet */
   .modal-overlay {
     padding: 0;
     align-items: flex-end;
@@ -2638,7 +2807,6 @@ textarea.form-control {
     font-size: 0.7rem;
   }
 
-  /* View grids */
   .view-photo-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 0.5rem;
@@ -2648,7 +2816,6 @@ textarea.form-control {
     gap: 0.6rem;
   }
 
-  /* Form */
   .form-grid {
     grid-template-columns: 1fr;
     gap: 0.75rem;
@@ -2658,7 +2825,6 @@ textarea.form-control {
     gap: 0.5rem;
   }
 
-  /* Modal footer buttons full-width */
   .modal-footer {
     flex-direction: column-reverse;
     gap: 0.5rem;
@@ -2674,7 +2840,6 @@ textarea.form-control {
     text-align: center;
   }
 
-  /* Toast spans width */
   .toast-notification {
     left: 1rem;
     right: 1rem;
@@ -2683,7 +2848,6 @@ textarea.form-control {
     justify-content: center;
   }
 
-  /* Pagination */
   .pagination-buttons {
     gap: 0.35rem;
   }
@@ -2694,7 +2858,6 @@ textarea.form-control {
     font-size: 0.8rem;
   }
 
-  /* View photo indicator smaller */
   .view-photo-badge {
     font-size: 0.6rem;
   }
@@ -2712,7 +2875,6 @@ textarea.form-control {
     font-size: 0.75rem;
   }
 
-  /* Even tighter table */
   .machines-table {
     min-width: 640px;
     font-size: 0.75rem;
@@ -2739,7 +2901,6 @@ textarea.form-control {
     height: 30px;
   }
 
-  /* Pagination smaller */
   .pagination-info,
   .page-indicator {
     font-size: 0.7rem;
@@ -2754,7 +2915,6 @@ textarea.form-control {
     gap: 0.25rem;
   }
 
-  /* Bulk buttons single column */
   .bulk-buttons {
     grid-template-columns: 1fr;
   }
@@ -2762,7 +2922,6 @@ textarea.form-control {
     font-size: 0.8rem;
   }
 
-  /* Modal tighter */
   .modal-body,
   .view-body {
     padding: 1rem;
@@ -2785,14 +2944,12 @@ textarea.form-control {
     font-size: 1rem;
   }
 
-  /* Photo grid — 2 columns */
   .view-photo-grid,
   .photo-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 0.4rem;
   }
 
-  /* Chips smaller */
   .chip {
     font-size: 0.72rem;
     padding: 0.35rem 0.65rem;
@@ -2805,7 +2962,6 @@ textarea.form-control {
     font-size: 0.72rem;
   }
 
-  /* Form labels smaller */
   .form-group label {
     font-size: 0.75rem;
   }
@@ -2814,7 +2970,6 @@ textarea.form-control {
     padding: 0.55rem 0.65rem;
   }
 
-  /* Toast */
   .toast-notification {
     font-size: 0.82rem;
     padding: 0.6rem 0.85rem;
