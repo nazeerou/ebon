@@ -640,8 +640,8 @@ const props = defineProps({
 })
 
 // API Base URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
-// const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://web.bas.co.tz/api/v1'
+// const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.ebon.bas.co.tz/api/v1'
 
 // State
 const customerId = computed(() => props.customerId || route.params.id)

@@ -84,7 +84,13 @@
                 <span class="amount">{{ formatCurrency(collection.amount_collected) }}</span>
               </td>
               <td>{{ formatDate(collection.collection_date) }}</td>
-              <td>{{ collection.collector?.name || '-' }}</td>
+              <td>
+                {{
+                  collection.collector
+                    ? collection.collector.first_name + ' ' + collection.collector.last_name
+                    : '-'
+                }}
+              </td>
               <td>
                 <div class="reading-info">
                   <span class="prev">{{ formatNumber(collection.reading?.previous_reading) }}</span>

@@ -86,7 +86,13 @@
               <td>{{ formatNumber(reading.current_reading) }}</td>
               <td>{{ formatNumber(reading.difference) }}</td>
               <td>{{ formatDate(reading.reading_date) }}</td>
-              <td>{{ reading.creator?.name || '-' }}</td>
+              <td>
+                {{
+                  reading.creator
+                    ? reading.creator.first_name + ' ' + reading.creator.last_name
+                    : '-'
+                }}
+              </td>
               <td>
                 <div class="action-dropdown" :ref="(el) => setActionRef(el, reading.id)">
                   <button class="action-menu-btn" @click.stop="toggleActionMenu(reading.id)">

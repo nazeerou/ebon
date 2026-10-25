@@ -14,8 +14,7 @@
           <input
             type="text"
             v-model="searchQuery"
-            @input="debouncedSearch"
-            placeholder="Tafuta kwa Jina au Serial No"
+            placeholder="Tafuta kwa Jina, Machine Code au Serial No"
             class="search-input"
           />
           <button v-if="searchQuery" class="clear-search" @click="clearSearch">
@@ -123,7 +122,13 @@
               <td colspan="7" class="text-center">
                 <div class="empty-state-small">
                   <i class="fas fa-microchip"></i>
-                  <p>Hakuna mashine zilizopatikana</p>
+                  <p>
+                    {{
+                      searchQuery
+                        ? 'Hakuna mashine zinazolingana na utafutaji wako'
+                        : 'Hakuna mashine zilizopatikana'
+                    }}
+                  </p>
                 </div>
               </td>
             </tr>
@@ -426,12 +431,6 @@
                   </div>
                   <small v-if="codeExists" class="field-error">
                     <i class="fas fa-exclamation-circle"></i> {{ codeCheckMessage }}
-                  </small>
-                  <small
-                    v-else-if="!checkingCode && form.machine_code && codeChecked"
-                    class="field-hint"
-                  >
-                    <!-- <i class="fas fa-check-circle"></i> Code inapatikana -->
                   </small>
                 </div>
 
@@ -932,7 +931,7 @@ const loadBranches = async () => {
   }
 }
 
-// ---- Load machines (only called explicitly: mount, page change, search) ----
+// ---- Load machines (mount, page change, search, after CRUD) ----
 const loadMachines = async () => {
   loading.value = true
   error.value = null
@@ -940,12 +939,15 @@ const loadMachines = async () => {
     const params = {
       per_page: pagination.perPage,
       page: pagination.currentPage,
-      search: searchQuery.value || undefined,
     }
-    const response = await machineStore.fetchMachines(params)
-    const responseData = response.data || response
 
-    if (responseData.data && Array.isArray(responseData.data)) {
+    const term = (searchQuery.value || '').trim()
+    if (term) params.search = term
+
+    const response = await machineStore.fetchMachines(params)
+    const responseData = response?.data ?? response
+
+    if (responseData?.data && Array.isArray(responseData.data)) {
       machines.value = responseData.data
       pagination.currentPage = responseData.current_page || 1
       pagination.lastPage = responseData.last_page || 1
@@ -954,6 +956,9 @@ const loadMachines = async () => {
       pagination.to = responseData.to || 0
     } else if (Array.isArray(responseData)) {
       machines.value = responseData
+      pagination.total = responseData.length
+      pagination.from = responseData.length ? 1 : 0
+      pagination.to = responseData.length
     } else {
       machines.value = []
     }
@@ -974,14 +979,25 @@ const changePage = (page) => {
   }
 }
 
-const debouncedSearch = debounce(() => {
+// Search — single source of truth via watch (no @input on the input!)
+const debouncedSearch = debounce(
+  () => {
+    loadMachines()
+  },
+  400,
+  { maxWait: 1000 },
+)
+
+watch(searchQuery, () => {
   pagination.currentPage = 1
-  loadMachines()
-}, 500)
-watch(searchQuery, () => debouncedSearch())
+  debouncedSearch()
+})
 
 const clearSearch = () => {
+  // Setting to '' fires watch → debouncedSearch → loadMachines
   searchQuery.value = ''
+  // Ensure immediate clearing if watch didn't fire (e.g. already '')
+  debouncedSearch.cancel()
   pagination.currentPage = 1
   loadMachines()
 }
@@ -1030,7 +1046,6 @@ const checkMachineCodeAvailability = async () => {
       showToastMessage(codeCheckMessage.value, 'error')
     }
   } catch (err) {
-    // Fallback: local check against currently loaded machines
     console.warn('check-code endpoint unavailable, using local check:', err?.message)
 
     const localExists = machines.value.some(
@@ -1222,7 +1237,7 @@ const openEditModal = (machine) => {
 
 /**
  * Save (create or update).
- * NO refetch — the store already patched local state.
+ * Refetches from server so the current search / page stays consistent.
  */
 const saveMachine = async () => {
   if (
@@ -1236,7 +1251,6 @@ const saveMachine = async () => {
     return
   }
 
-  // Final duplicate check before submit
   await checkMachineCodeAvailability()
   if (codeExists.value) {
     showToastMessage(
@@ -1297,14 +1311,9 @@ const saveMachine = async () => {
           (wasEditing ? 'Mashine imehaririwa kwa mafanikio' : 'Mashine imesajiliwa kwa mafanikio'),
         'success',
       )
-
-      machines.value = [...machineStore.machines]
-
-      if (!wasEditing) {
-        pagination.total += 1
-      }
-
       closeModal()
+      // Refetch keeps search filter / pagination intact
+      await loadMachines()
     } else {
       showToastMessage(res?.message || 'Hitilafu wakati wa kuhifadhi', 'error')
     }
@@ -1416,11 +1425,10 @@ const deleteMachine = async () => {
       showToastMessage(res.message || 'Mashine imefutwa', 'success')
       closeDeleteModal()
 
-      machines.value = [...machineStore.machines]
-      if (pagination.total > 0) pagination.total -= 1
-
       selectedMachines.value = selectedMachines.value.filter((id) => id !== deletedId)
       updateSelectAll()
+
+      await loadMachines()
     } else {
       showToastMessage(res?.message || 'Imeshindwa kufuta', 'error')
     }
@@ -1442,8 +1450,8 @@ const bulkActivate = async () => {
     const ok = results.filter((r) => r?.success).length
     showToastMessage(`Mashine ${ok} zimewashwa`, 'success')
 
-    machines.value = [...machineStore.machines]
     clearSelection()
+    await loadMachines()
   } catch (err) {
     showToastMessage('Hitilafu', 'error')
   }
@@ -1458,8 +1466,8 @@ const bulkDeactivate = async () => {
     const ok = results.filter((r) => r?.success).length
     showToastMessage(`Mashine ${ok} zimezimwa`, 'success')
 
-    machines.value = [...machineStore.machines]
     clearSelection()
+    await loadMachines()
   } catch (err) {
     showToastMessage('Hitilafu', 'error')
   }
@@ -1484,10 +1492,8 @@ const bulkDelete = async () => {
       showToastMessage(res.message || `${ids.length} mashine zimefutwa`, 'success')
       closeBulkDeleteModal()
 
-      machines.value = [...machineStore.machines]
-      pagination.total = Math.max(0, pagination.total - ids.length)
-
       clearSelection()
+      await loadMachines()
     } else {
       showToastMessage(res?.message || 'Hitilafu', 'error')
     }
@@ -1591,7 +1597,7 @@ onUnmounted(() => {
 /* Search */
 .search-wrapper {
   position: relative;
-  width: 280px;
+  width: 320px;
   max-width: 100%;
 }
 .search-icon {
