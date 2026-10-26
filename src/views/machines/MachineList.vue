@@ -907,24 +907,54 @@ const buildPhotoUrl = (pathOrUrl) => {
 
 const today = () => new Date().toISOString().slice(0, 10)
 
-// ---- Load branches ----
+const getAuthToken = () =>
+  localStorage.getItem('token') ||
+  localStorage.getItem('auth_token') ||
+  localStorage.getItem('access_token')
+
+// ---- Load branches (FIXED) ----
 const loadBranches = async () => {
   try {
-    const token =
-      localStorage.getItem('token') ||
-      localStorage.getItem('auth_token') ||
-      localStorage.getItem('access_token')
+    const token = getAuthToken()
 
-    const response = await axios.get(`${API_URL}/branches`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
+    // Fetch ALL branches — the API paginates (per_page: 15 by default),
+    // so we loop pages to ensure the select isn't missing options.
+    const all = []
+    let page = 1
+    let lastPage = 1
 
-    const payload = response?.data
+    do {
+      const response = await axios.get(`${API_URL}/branches`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        params: { per_page: 100, page },
+      })
 
-    if (Array.isArray(payload?.data)) branches.value = payload.data
-    else if (Array.isArray(payload)) branches.value = payload
-    else if (Array.isArray(payload?.branches)) branches.value = payload.branches
-    else branches.value = []
+      const payload = response?.data
+
+      // Laravel paginated: { success: true, data: { data: [...], last_page, ... } }
+      let pageItems = []
+      if (Array.isArray(payload?.data?.data)) {
+        pageItems = payload.data.data
+        lastPage = payload.data.last_page || 1
+      } else if (Array.isArray(payload?.data)) {
+        pageItems = payload.data
+        lastPage = 1
+      } else if (Array.isArray(payload)) {
+        pageItems = payload
+        lastPage = 1
+      } else if (Array.isArray(payload?.branches)) {
+        pageItems = payload.branches
+        lastPage = 1
+      }
+
+      all.push(...pageItems)
+      page++
+
+      // Safety stop in case backend ignores last_page
+      if (pageItems.length === 0) break
+    } while (page <= lastPage && page <= 20)
+
+    branches.value = all
   } catch (err) {
     console.error('❌ [branches] failed:', err?.message)
     branches.value = []
@@ -979,7 +1009,7 @@ const changePage = (page) => {
   }
 }
 
-// Search — single source of truth via watch (no @input on the input!)
+// Search — single source of truth via watch
 const debouncedSearch = debounce(
   () => {
     loadMachines()
@@ -994,9 +1024,7 @@ watch(searchQuery, () => {
 })
 
 const clearSearch = () => {
-  // Setting to '' fires watch → debouncedSearch → loadMachines
   searchQuery.value = ''
-  // Ensure immediate clearing if watch didn't fire (e.g. already '')
   debouncedSearch.cancel()
   pagination.currentPage = 1
   loadMachines()
@@ -1021,10 +1049,7 @@ const checkMachineCodeAvailability = async () => {
 
   checkingCode.value = true
   try {
-    const token =
-      localStorage.getItem('token') ||
-      localStorage.getItem('auth_token') ||
-      localStorage.getItem('access_token')
+    const token = getAuthToken()
 
     const params = { machine_code: code }
     if (isEditing.value && editingId.value) params.exclude_id = editingId.value
@@ -1235,10 +1260,6 @@ const openEditModal = (machine) => {
   closeActionMenu()
 }
 
-/**
- * Save (create or update).
- * Refetches from server so the current search / page stays consistent.
- */
 const saveMachine = async () => {
   if (
     !form.machine_code ||
@@ -1312,7 +1333,6 @@ const saveMachine = async () => {
         'success',
       )
       closeModal()
-      // Refetch keeps search filter / pagination intact
       await loadMachines()
     } else {
       showToastMessage(res?.message || 'Hitilafu wakati wa kuhifadhi', 'error')
